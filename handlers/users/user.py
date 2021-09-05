@@ -10,6 +10,9 @@ from keyboards.default.main import main_keyboard, price_and_back, extend_and_bac
 from keyboards.inline.inline import kb_with_link
 from loader import dp, db
 
+from tronapi import Tron
+from tronapi import HttpProvider
+
 
 # ловим главные кнопки с клавиатуры main_keyboard
 @dp.message_handler(Text(equals=["Моя подписка"]))
@@ -41,7 +44,8 @@ async def show_sales(message: types.Message):
         if treal[0] != 0:
             date_db = treal[1].split("-")
             date_date = date(int(date_db[0]), int(date_db[1]), int(date_db[2])) + timedelta(days=14)
-            await message.answer(f"У вас есть шанс бесплатно попасть в VIP группу до {date_date}", reply_markup=treal_free)
+            await message.answer(f"У вас есть шанс бесплатно попасть в VIP группу до {date_date}",
+                                 reply_markup=treal_free)
     elif sales:
         await message.answer(
             f"АКЦИЯ -{sales[0][0]}% с {sales[0][1]} по {sales[0][2]}.\n"
@@ -52,7 +56,6 @@ async def show_sales(message: types.Message):
     #     и отдельный текст на оплату, также кошелек и сумма на оплату, учитывая акцию.",
     else:
         await message.answer("На данный момент нет действующих акций", reply_markup=back)
-
 
 
 # вторичные клавиатуры
@@ -108,36 +111,38 @@ hash_pattern = r"^[a-zA-Z0-9]+$"
 async def hash_transaction(message: types.Message):
     # пример hash b6d8106f9e91de59a74f8219aa527cc787e732b25e4d83787bc37acec461bba5
     # кошелек TCdBe2LZkaP9GWmksDBwCxiJQ1SjoagTbU
-    response = check_hash(message.text)
-    print(response.text)
-    if response["code"] == 1 and response["data"]["to"] == "TCdBe2LZkaP9GWmksDBwCxiJQ1SjoagTbU":
-        kb_subs = await kb_with_link()
-        await message.answer("Ваша оплата прошла успешно!", reply_markup=main_keyboard)
-        await message.answer("Вот ваши ссылки для доступа", reply_markup=kb_subs)
-        now = datetime.now()
-        db.edit_user_subs(message.from_user.id, now.strftime("%Y-%m-%d"))
-        # записать когда напомнить
-        # при появлении в подписчиках чата и группы удалить ссылки вступления
-    elif response["code"] == 1 and response["data"]["to"] != "TCdBe2LZkaP9GWmksDBwCxiJQ1SjoagTbU":
-        await message.answer(
-            f"Этот платеж предназначен для кошелька {response['data']['to']}, "
-            f"а необходимо было отправить платеж на кошелек TCdBe2LZkaP9GWmksDBwCxiJQ1SjoagTbU",
-            reply_markup=try_payed)
-    elif response["code"] == 404:
+    # hex кошелька 411d1eebad3bf7fc31695bf514693e613f2f36e83e
+    try:
+        response = check_hash(message.text)
+        if response.get("raw_data").get("contract")[0].get("parameter").get("value").get("contract_address") != None:
+            address = response.get("raw_data").get("contract")[0].get("parameter").get("value").get("contract_address")
+        else:
+            address = response.get("raw_data").get("contract")[0].get("parameter").get("value").get("to_address")
+
+        response_status = response['ret'][0]['contractRet']
+        if response_status == "SUCCESS" and address == "411d1eebad3bf7fc31695bf514693e613f2f36e83e":
+            kb_subs = await kb_with_link()
+            await message.answer("Ваша оплата прошла успешно!", reply_markup=main_keyboard)
+            await message.answer("Вот ваши ссылки для доступа", reply_markup=kb_subs)
+            now = datetime.now()
+            db.edit_user_subs(message.from_user.id, now.strftime("%Y-%m-%d"))
+            # записать когда напомнить
+            # при появлении в подписчиках чата и группы удалить ссылки вступления
+        elif response_status == "SUCCESS" and address != "411d1eebad3bf7fc31695bf514693e613f2f36e83e":
+            await message.answer(
+                f"Этот платеж предназначен для другого кошелька, "
+                f"отправьте платеж на кошелек TCdBe2LZkaP9GWmksDBwCxiJQ1SjoagTbU",
+                reply_markup=try_payed)
+        else:
+            await message.answer("Ваша трансакция не прошла еще, ждем подтверждения операции", reply_markup=try_payed)
+
+
+    except ValueError:
         await message.answer("Такой трансакции не существует, проверьте еще раз хеш трансакции",
                              reply_markup=try_payed)
-    if response["code"] != 404 and response["code"] != 1:
-        await message.answer("Ваша трансакция не прошла еще, ждем подтверждения операции", reply_markup=try_payed)
 
 
 def check_hash(hash_trans):
-    # url = f"https://trx.tokenview.com/ru/tx/{hash_trans}"
-    # url = f"https://tronscan.org/#/transaction/{hash_trans}"
-    # response = requests.request("GET", url)
-    # return response
-    from tronapi import Tron
-    from tronapi import HttpProvider
-
     full_node = HttpProvider('https://api.trongrid.io')
     solidity_node = HttpProvider('https://api.trongrid.io')
     event_server = HttpProvider('https://api.trongrid.io')
@@ -146,4 +151,4 @@ def check_hash(hash_trans):
                 event_server=event_server)
 
     result = tron.trx.get_transaction(hash_trans)
-    print(result)
+    return result
