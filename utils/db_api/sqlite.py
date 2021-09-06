@@ -1,4 +1,7 @@
+import datetime
 import sqlite3
+
+from dateutil.relativedelta import relativedelta
 
 
 class Database:
@@ -44,6 +47,7 @@ class Database:
             telegram_id int NOT NULL,
             subs int NOT NULL,
             date_begin date NULL,
+            date_end date NULL,
             subs_id int NULL,
             PRIMARY KEY (telegram_id),
             FOREIGN KEY (subs_id) REFERENCES Subs (subs_id) 
@@ -92,20 +96,35 @@ class Database:
         return sql, tuple(parameters.values())
 
     def add_user(self, telegram_id: int, duration_subs: str):
-        if duration_subs == "1 год":
-            subs_id = 12
+        if duration_subs == "1 год" or duration_subs == "1 год со скидкой":
+            subs_id = 4
+        elif duration_subs == "6 месяцев" or duration_subs == "6 месяцев со скидкой":
+            subs_id = 3
+        elif duration_subs == "4 месяца" or duration_subs == "4 месяца со скидкой":
+            subs_id = 2
         else:
-            subs_id = duration_subs[0]
+            subs_id = 1
         sql = """
         INSERT INTO Users(telegram_id, subs, subs_id) VALUES(?, ?, ?)
         """
         self.execute(sql, parameters=(int(telegram_id), 0, int(subs_id)), commit=True)
 
+    def select_user(self, telegram_id):
+        sql = "SELECT * FROM Users WHERE telegram_id=?"
+        return self.execute(sql, parameters=(telegram_id,), fetchone=True)
+
+    def select_subs(self, subs_id):
+        sql = "SELECT month_subs FROM Subs WHERE subs_id=?"
+        return self.execute(sql, parameters=(subs_id,), fetchone=True)
+
     def edit_user_subs(self, telegram_id: int, begin_date):
+        user_subs_id = self.select_user(telegram_id)[4]
+        duration = self.select_subs(user_subs_id)[0]
+        date_end = datetime.datetime.strptime(begin_date, "%Y-%m-%d") + relativedelta(months=+duration)
         sql = """
-        UPDATE Users SET date_begin=?, subs=1 WHERE telegram_id=?
+        UPDATE Users SET date_begin=?, date_end=?, subs=1 WHERE telegram_id=?
         """
-        self.execute(sql, parameters=(begin_date, int(telegram_id)), commit=True)
+        self.execute(sql, parameters=(begin_date, date_end.strftime("%Y-%m-%d"), int(telegram_id)), commit=True)
 
     def add_sale(self, sale_percent, date_begin, date_end, about_sale):
         sql = """
@@ -132,10 +151,6 @@ class Database:
               """
         self.execute(sql, parameters=(begin_date,), commit=True)
 
-    def select_user(self, telegram_id):
-        sql = "SELECT * FROM Users WHERE telegram_id=?"
-        return self.execute(sql, parameters=(telegram_id,), fetchone=True)
-
     def select_prices(self):
         sql = "SELECT * FROM Subs"
         return self.execute(sql, fetchall=True)
@@ -143,17 +158,36 @@ class Database:
     def treal_mode(self):
         sql = "SELECT * FROM Treal"
         return self.execute(sql, fetchone=True)
-    #
+
+    def select_price(self, duration_subs: str):
+        # да, тут нормальный чел сделает запрос и узнает ид подписки, но ну тут-то было)
+        if duration_subs == "1 год" or duration_subs == "1 год со скидкой":
+            subs_id = 4
+        elif duration_subs == "6 месяцев" or duration_subs == "6 месяцев со скидкой":
+            subs_id = 3
+        elif duration_subs == "4 месяца" or duration_subs == "4 месяца со скидкой":
+            subs_id = 2
+        else:
+            subs_id = 1
+        sql = "SELECT price FROM Subs WHERE subs_id=?"
+        return self.execute(sql, parameters=(subs_id,), fetchone=True)
+
+    def edit_user_duration_subs(self, telegram_id: int, duration_subs: str):
+        if duration_subs == "1 год" or duration_subs == "1 год со скидкой":
+            subs_id = 4
+        elif duration_subs == "6 месяцев" or duration_subs == "6 месяцев со скидкой":
+            subs_id = 3
+        elif duration_subs == "4 месяца" or duration_subs == "4 месяца со скидкой":
+            subs_id = 2
+        else:
+            subs_id = 1
+        sql = """
+        UPDATE Users SET subs_id=? WHERE telegram_id=?
+        """
+        self.execute(sql, parameters=(int(subs_id), int(telegram_id)), commit=True)
+
     # def count_users(self):
     #     return self.execute("SELECT COUNT(*) FROM Users;", fetchone=True)
-    #
-    # def update_user_email(self, email, id):
-    #     # SQL_EXAMPLE = "UPDATE Users SET email=mail@gmail.com WHERE id=12345"
-    #
-    #     sql = f"""
-    #     UPDATE Users SET email=? WHERE id=?
-    #     """
-    #     return self.execute(sql, parameters=(email, id), commit=True)
 
 
 def logger(statement):

@@ -135,3 +135,37 @@ admins_main_kb = ReplyKeyboardMarkup(
     ],
     resize_keyboard=True
 )
+
+buy_with_sale_and_back = ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton(text="Оплатить со скидкой")
+        ],
+        [
+            KeyboardButton(text="Назад")
+        ],
+    ],
+    resize_keyboard=True
+)
+
+
+duration_subs_sale = ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton(text="1 месяц со скидкой")
+        ],
+        [
+            KeyboardButton(text="4 месяца со скидкой")
+        ],
+        [
+            KeyboardButton(text="6 месяцев со скидкой")
+        ],
+        [
+            KeyboardButton(text="1 год со скидкой")
+        ],
+        [
+            KeyboardButton(text="Назад")
+        ]
+    ],
+    resize_keyboard=True
+)

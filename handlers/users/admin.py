@@ -40,6 +40,7 @@ async def save_price(message: types.Message, state: FSMContext):
 @dp.message_handler(Text(equals=["Включить пробные две недели для всех пользователей"]))
 async def edit_price(message: types.Message):
     tomorrow = datetime.datetime.now() + datetime.timedelta(days=1)
+    # tomorrow = datetime.datetime.now() для теста
     db.treal_on(tomorrow.strftime("%Y-%m-%d"))
     await message.answer("Пробная подписка для всех пользователей будет включена завтра")
 
