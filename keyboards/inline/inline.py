@@ -10,13 +10,17 @@ async def generate_channel_link(ID):
     return url_channel.invite_link
 
 
-async def kb_with_link():
+async def kb_with_link(telegram_id):
+    channel_link = await generate_channel_link(CHANNEL_ID)
+    group_link = await generate_channel_link(GROUP_ID)
+    db.add_used_link(telegram_id, channel_link)
+    db.add_used_link(telegram_id, group_link)
     free_vip_subs = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="Вступить в VIP канал", url=await generate_channel_link(CHANNEL_ID))
+            InlineKeyboardButton(text="Вступить в VIP канал", url=channel_link)
         ],
         [
-            InlineKeyboardButton(text="Вступить в VIP чат", url=await generate_channel_link(GROUP_ID))
+            InlineKeyboardButton(text="Вступить в VIP чат", url=group_link)
         ]
     ])
     return free_vip_subs

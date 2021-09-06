@@ -88,6 +88,26 @@ class Database:
         """
         self.execute(sql, commit=True)
 
+    def create_table_used_hash(self):
+        sql = """
+           CREATE TABLE IF NOT EXISTS Hash (
+               hash_trans text NOT NULL,
+               PRIMARY KEY (hash_trans)
+               );
+           """
+        self.execute(sql, commit=True)
+
+    def create_table_link_for_delete(self):
+        sql = """
+        CREATE TABLE IF NOT EXISTS UsedLink (
+            link text NOT NULL,
+            telegram_id int NOT NULL,
+            used int NOT NULL,
+            PRIMARY KEY (link)
+            );
+        """
+        self.execute(sql, commit=True)
+
     @staticmethod
     def format_args(sql, parameters: dict):
         sql += " AND ".join([
@@ -185,6 +205,22 @@ class Database:
         UPDATE Users SET subs_id=? WHERE telegram_id=?
         """
         self.execute(sql, parameters=(int(subs_id), int(telegram_id)), commit=True)
+
+    def add_hash(self, hash_trans):
+        sql = """
+                INSERT INTO Hash(hash_trans) VALUES(?)
+                """
+        self.execute(sql, parameters=(hash_trans), commit=True)
+
+    def select_hash(self, hash_trans):
+        sql = "SELECT * FROM Hash WHERE hash_trans=?"
+        return self.execute(sql, parameters=(hash_trans,), fetchone=True)
+
+    def add_used_link(self, telegram_id, link):
+        sql = """
+                INSERT INTO Hash(link, telegram_id, used) VALUES(?, ?, ?)
+                """
+        self.execute(sql, parameters=(link, telegram_id, 0), commit=True)
 
     # def count_users(self):
     #     return self.execute("SELECT COUNT(*) FROM Users;", fetchone=True)

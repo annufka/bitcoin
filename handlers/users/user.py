@@ -95,7 +95,7 @@ async def buy_subs(message: types.Message):
 # treal_free
 @dp.message_handler(Text(equals=["Вступить в VIP"]))
 async def get_free_treal(message: types.Message):
-    await message.answer("Вы можете подписаться на VIP канал, а также вступить в VIP чат", reply_markup=kb_with_link())
+    await message.answer("Вы можете подписаться на VIP канал, а также вступить в VIP чат", reply_markup=kb_with_link(message.from_user.id))
 
 
 # duration_subs
@@ -128,40 +128,41 @@ async def hash_transaction(message: types.Message):
     # пример hash b6d8106f9e91de59a74f8219aa527cc787e732b25e4d83787bc37acec461bba5
     # кошелек TCdBe2LZkaP9GWmksDBwCxiJQ1SjoagTbU
     # hex кошелька 411d1eebad3bf7fc31695bf514693e613f2f36e83e
-    try:
-        response = check_hash(message.text)
-        if response.get("raw_data").get("contract")[0].get("parameter").get("value").get("contract_address") != None:
-            address = response.get("raw_data").get("contract")[0].get("parameter").get("value").get("contract_address")
-        else:
-            address = response.get("raw_data").get("contract")[0].get("parameter").get("value").get("to_address")
-
-        response_status = response['ret'][0]['contractRet']
-        if response_status == "SUCCESS" and address == "411d1eebad3bf7fc31695bf514693e613f2f36e83e":
-            kb_subs = await kb_with_link()
-            await message.answer("Ваша оплата прошла успешно!", reply_markup=main_keyboard)
-            await message.answer("Вот ваши ссылки для доступа", reply_markup=kb_subs)
-            user = db.select_user(message.from_user.id)
-            date = ""
-            if user[2]:
-                date_from_db = user[3].split("-")
-                date = datetime.datetime(int(date_from_db[0]), int(date_from_db[1]), int(date_from_db[2]))
+    if not db.select_hash(message.text):
+        try:
+            response = check_hash(message.text)
+            if response.get("raw_data").get("contract")[0].get("parameter").get("value").get("contract_address") != None:
+                address = response.get("raw_data").get("contract")[0].get("parameter").get("value").get("contract_address")
             else:
-                date = datetime.datetime.now()
-            db.edit_user_subs(message.from_user.id, date.strftime("%Y-%m-%d"))
-            # записать когда напомнить
-            # при появлении в подписчиках чата и группы удалить ссылки вступления
-        elif response_status == "SUCCESS" and address != "411d1eebad3bf7fc31695bf514693e613f2f36e83e":
-            await message.answer(
-                f"Этот платеж предназначен для другого кошелька, "
-                f"отправьте платеж на кошелек TCdBe2LZkaP9GWmksDBwCxiJQ1SjoagTbU",
-                reply_markup=try_payed)
-        else:
-            await message.answer("Ваша трансакция не прошла еще, ждем подтверждения операции", reply_markup=try_payed)
-
-
-    except ValueError:
-        await message.answer("Такой трансакции не существует, проверьте еще раз хеш трансакции",
-                             reply_markup=try_payed)
+                address = response.get("raw_data").get("contract")[0].get("parameter").get("value").get("to_address")
+            response_status = response['ret'][0]['contractRet']
+            if response_status == "SUCCESS" and address == "411d1eebad3bf7fc31695bf514693e613f2f36e83e":
+                kb_subs = await kb_with_link(message.from_user.id)
+                await message.answer("Ваша оплата прошла успешно!", reply_markup=main_keyboard)
+                await message.answer("Вот ваши ссылки для доступа", reply_markup=kb_subs)
+                db.add_hash(message.text) # чтобы потом проверять не повторилась ли трансакция
+                user = db.select_user(message.from_user.id)
+                date = ""
+                if user[2]:
+                    date_from_db = user[3].split("-")
+                    date = datetime.datetime(int(date_from_db[0]), int(date_from_db[1]), int(date_from_db[2]))
+                else:
+                    date = datetime.datetime.now()
+                db.edit_user_subs(message.from_user.id, date.strftime("%Y-%m-%d"))
+                # записать когда напомнить
+                # при появлении в подписчиках чата и группы удалить ссылки вступления
+            elif response_status == "SUCCESS" and address != "411d1eebad3bf7fc31695bf514693e613f2f36e83e":
+                await message.answer(
+                    f"Этот платеж предназначен для другого кошелька, "
+                    f"отправьте платеж на кошелек TCdBe2LZkaP9GWmksDBwCxiJQ1SjoagTbU",
+                    reply_markup=try_payed)
+            else:
+                await message.answer("Ваша трансакция не прошла еще, ждем подтверждения операции", reply_markup=try_payed)
+        except ValueError:
+            await message.answer("Такой трансакции не существует, проверьте еще раз хеш трансакции",
+                                 reply_markup=try_payed)
+    else:
+        await message.answer("Данная трансакция уже есть в базе, вы уверенны, что это ваша трансакция?")
 
 
 def check_hash(hash_trans):
