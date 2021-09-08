@@ -97,7 +97,8 @@ async def buy_subs(message: types.Message):
 @dp.message_handler(IsPrivate(), Text(equals=["Вступить в VIP"]))
 async def get_free_treal(message: types.Message):
     await message.answer("Вы можете подписаться на VIP канал, а также вступить в VIP чат",
-                         reply_markup=kb_with_link(message.from_user.id))
+                         reply_markup=await kb_with_link(message.from_user.id))
+    db.add_treal_user(message.from_user.id)
 
 
 # duration_subs

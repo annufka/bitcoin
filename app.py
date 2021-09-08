@@ -1,8 +1,11 @@
+import asyncio
+
 from aiogram import executor
 
 from loader import dp, db
 import middlewares, filters, handlers
-from schedule_user import scheduler
+from schedule_delete_sale import deleteSale, deleteTreal
+from schedule_user import startTimer
 from utils.notify_admins import on_startup_notify
 from utils.set_bot_commands import set_default_commands
 
@@ -21,7 +24,11 @@ async def on_startup(dispatcher):
 
     # Уведомляет про запуск
     await on_startup_notify(dispatcher)
-    await scheduler()
 
 if __name__ == '__main__':
+    loop = asyncio.get_event_loop()
+    loop.create_task(startTimer(86400))
+    loop.create_task(deleteSale(86400))
+    loop.create_task(deleteTreal(86400))
     executor.start_polling(dp, on_startup=on_startup)
+

@@ -60,6 +60,7 @@ class Database:
         CREATE TABLE IF NOT EXISTS Treal (
             treal_on int NOT NULL,
             date_begin date NULL,
+            date_end date NULL,
             PRIMARY KEY (treal_on)
             );
         """
@@ -165,10 +166,12 @@ class Database:
         self.execute(sql, parameters=(int(price), int(duration)), commit=True)
 
     def treal_on(self, begin_date):
+        end_date = datetime.datetime.strptime(begin_date, "%Y-%m-%d") + relativedelta(days=14)
+        print(end_date)
         sql = """
-              UPDATE Treal SET date_begin=?, treal_on=1 WHERE treal_on=0
+              UPDATE Treal SET date_begin=?, treal_on=1, date_end=? WHERE treal_on=0
               """
-        self.execute(sql, parameters=(begin_date,), commit=True)
+        self.execute(sql, parameters=(begin_date, end_date.strftime("%Y-%m-%d")), commit=True)
 
     def select_prices(self):
         sql = "SELECT * FROM Subs"
@@ -233,6 +236,31 @@ class Database:
         SELECT * FROM Users
         """
         return self.execute(sql, fetchall=True)
+
+    def select_sales_with_date(self, yesterday):
+        sql = "SELECT * FROM Sale WHERE date_end=?"
+        return self.execute(sql, parameters=(yesterday,), fetchall=True)
+
+    def treal_mode_with_date(self, yesterday):
+        sql = "SELECT * FROM Treal WHERE date_end=?"
+        return self.execute(sql, parameters=(yesterday,), fetchone=True)
+
+    def treal_off(self):
+        sql = """
+              UPDATE Treal SET date_begin=null, treal_on=0, date_end=null WHERE treal_on=1
+              """
+        self.execute(sql, commit=True)
+
+    def add_treal_user(self, telegram_id):
+        date_end = self.treal_mode()[2]
+        sql = """
+                INSERT INTO Users(telegram_id, subs, date_end) VALUES(?, ?, ?)
+                """
+        self.execute(sql, parameters=(int(telegram_id), 0, date_end), commit=True)
+
+    def select_users_with_treal(self, yesterday):
+        sql = "SELECT * FROM Users WHERE date_end=? and subs_id=null and date_begin=null and subs=0"
+        return self.execute(sql, parameters=(yesterday,), fetchone=True)
 
     # def count_users(self):
     #     return self.execute("SELECT COUNT(*) FROM Users;", fetchone=True)
