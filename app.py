@@ -5,7 +5,7 @@ from aiogram import executor
 from loader import dp, db
 import middlewares, filters, handlers
 from schedule_delete_sale import deleteSale, deleteTreal
-from schedule_user import startTimer
+from schedule_user import startTimer, kick_user
 from utils.notify_admins import on_startup_notify
 from utils.set_bot_commands import set_default_commands
 
@@ -30,5 +30,6 @@ if __name__ == '__main__':
     loop.create_task(startTimer(86400))
     loop.create_task(deleteSale(86400))
     loop.create_task(deleteTreal(86400))
+    loop.create_task(kick_user(86400))
     executor.start_polling(dp, on_startup=on_startup)
 

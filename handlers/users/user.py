@@ -6,6 +6,7 @@ from aiogram import types
 from aiogram.dispatcher.filters.builtin import Text, Regexp
 from dateutil.relativedelta import relativedelta
 
+from data.config import GROUP_ID, CHANNEL_ID
 from filters.type_chat import IsPrivate
 from keyboards.default.main import main_keyboard, price_and_back, extend_and_back, buy_and_back, back, treal_free, \
     duration_subs, payed, try_payed, buy_with_sale_and_back, duration_subs_sale
@@ -96,6 +97,8 @@ async def buy_subs(message: types.Message):
 # treal_free
 @dp.message_handler(IsPrivate(), Text(equals=["Вступить в VIP"]))
 async def get_free_treal(message: types.Message):
+    await dp.bot.unban_chat_member(chat_id=GROUP_ID, user_id=message.from_user.id)
+    await dp.bot.unban_chat_member(chat_id=CHANNEL_ID, user_id=message.from_user.id)
     await message.answer("Вы можете подписаться на VIP канал, а также вступить в VIP чат",
                          reply_markup=await kb_with_link(message.from_user.id))
     db.add_treal_user(message.from_user.id)
@@ -142,6 +145,8 @@ async def hash_transaction(message: types.Message):
                 address = response.get("raw_data").get("contract")[0].get("parameter").get("value").get("to_address")
             response_status = response['ret'][0]['contractRet']
             if response_status == "SUCCESS" and address == "411d1eebad3bf7fc31695bf514693e613f2f36e83e":
+                await dp.bot.unban_chat_member(chat_id=GROUP_ID, user_id=message.from_user.id)
+                await dp.bot.unban_chat_member(chat_id=CHANNEL_ID, user_id=message.from_user.id)
                 kb_subs = await kb_with_link(message.from_user.id)
                 await message.answer("Ваша оплата прошла успешно!", reply_markup=main_keyboard)
                 await message.answer("Вот ваши ссылки для доступа", reply_markup=kb_subs)

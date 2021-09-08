@@ -260,7 +260,14 @@ class Database:
 
     def select_users_with_treal(self, yesterday):
         sql = "SELECT * FROM Users WHERE date_end=? and subs_id=null and date_begin=null and subs=0"
-        return self.execute(sql, parameters=(yesterday,), fetchone=True)
+        return self.execute(sql, parameters=(yesterday,), fetchall=True)
+
+    def delete_user_all_null(self, telegram_id):
+        self.execute("DELETE FROM Users WHERE telegram_id=?", parameters=(telegram_id,), commit=True)
+
+    def select_users_with_date(self, yesterday):
+        sql = "SELECT * FROM Users WHERE date_end=? and subs=1"
+        return self.execute(sql, parameters=(yesterday,), fetchall=True)
 
     # def count_users(self):
     #     return self.execute("SELECT COUNT(*) FROM Users;", fetchone=True)

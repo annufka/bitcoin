@@ -24,3 +24,4 @@ async def deleteTreal(waitForSeconds):
             for user in users:
                 await dp.bot.kick_chat_member(chat_id=GROUP_ID, user_id=user[0])
                 await dp.bot.kick_chat_member(chat_id=CHANNEL_ID, user_id=user[0])
+                db.delete_user_all_null(user[0])
