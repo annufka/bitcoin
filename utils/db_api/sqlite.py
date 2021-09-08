@@ -97,15 +97,14 @@ class Database:
            """
         self.execute(sql, commit=True)
 
-    def create_table_link_for_delete(self):
+    def create_schedule(self):
         sql = """
-        CREATE TABLE IF NOT EXISTS UsedLink (
-            link text NOT NULL,
-            telegram_id int NOT NULL,
-            used int NOT NULL,
-            PRIMARY KEY (link)
-            );
-        """
+            CREATE TABLE IF NOT EXISTS Schedule (
+                id integer not null primary key autoincrement,
+                telegram_id int NOT NULL,
+                date_of_alarm date NOT NULL
+                );
+            """
         self.execute(sql, commit=True)
 
     @staticmethod
@@ -210,17 +209,30 @@ class Database:
         sql = """
                 INSERT INTO Hash(hash_trans) VALUES(?)
                 """
-        self.execute(sql, parameters=(hash_trans), commit=True)
+        self.execute(sql, parameters=(hash_trans,), commit=True)
 
     def select_hash(self, hash_trans):
         sql = "SELECT * FROM Hash WHERE hash_trans=?"
         return self.execute(sql, parameters=(hash_trans,), fetchone=True)
 
-    def add_used_link(self, telegram_id, link):
+    def add_alarm_for_users(self, telegram_id, date_alarm):
         sql = """
-                INSERT INTO Hash(link, telegram_id, used) VALUES(?, ?, ?)
-                """
-        self.execute(sql, parameters=(link, telegram_id, 0), commit=True)
+              INSERT INTO Schedule(telegram_id, date_of_alarm) VALUES(?, ?)
+              """
+        self.execute(sql, parameters=(telegram_id, date_alarm.strftime("%Y-%m-%d")), commit=True)
+
+    def delete_alarm_for_users(self, telegram_id):
+        self.execute("DELETE FROM Schedule WHERE telegram_id=?", parameters=(telegram_id,), commit=True)
+
+    def select_alarm_for_users(self, now):
+        sql = "SELECT * FROM Schedule WHERE date_of_alarm=?"
+        return self.execute(sql, parameters=(now.strftime("%Y-%m-%d"),), fetchall=True)
+
+    def select_users(self):
+        sql = """
+        SELECT * FROM Users
+        """
+        return self.execute(sql, fetchall=True)
 
     # def count_users(self):
     #     return self.execute("SELECT COUNT(*) FROM Users;", fetchone=True)

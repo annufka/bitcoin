@@ -6,6 +6,7 @@ from aiogram import types
 from aiogram.dispatcher.filters.builtin import Text, Regexp
 from dateutil.relativedelta import relativedelta
 
+from filters.type_chat import IsPrivate
 from keyboards.default.main import main_keyboard, price_and_back, extend_and_back, buy_and_back, back, treal_free, \
     duration_subs, payed, try_payed, buy_with_sale_and_back, duration_subs_sale
 from keyboards.inline.inline import kb_with_link
@@ -18,7 +19,7 @@ locale.setlocale(locale.LC_ALL, "")
 
 
 # ловим главные кнопки с клавиатуры main_keyboard
-@dp.message_handler(Text(equals=["Моя подписка"]))
+@dp.message_handler(IsPrivate(), Text(equals=["Моя подписка"]))
 async def show_subs_status(message: types.Message):
     user = db.select_user(message.from_user.id)
     if user:
@@ -29,7 +30,7 @@ async def show_subs_status(message: types.Message):
         await message.answer("У вас нет активной подписки", reply_markup=price_and_back)
 
 
-@dp.message_handler(Text(equals=["Тарифы"]))
+@dp.message_handler(IsPrivate(), Text(equals=["Тарифы"]))
 async def show_prices(message: types.Message):
     prices = db.select_prices()
     await message.answer(
@@ -37,7 +38,7 @@ async def show_prices(message: types.Message):
         reply_markup=buy_and_back)
 
 
-@dp.message_handler(Text(equals=["Акции"]))
+@dp.message_handler(IsPrivate(), Text(equals=["Акции"]))
 async def show_sales(message: types.Message):
     sales = db.select_sales()
     treal = db.treal_mode()
@@ -72,13 +73,13 @@ async def show_sales(message: types.Message):
 
 # вторичные клавиатуры
 # price_and_back (Тарифы ловим выше)
-@dp.message_handler(Text(equals=["Назад"]))
+@dp.message_handler(IsPrivate(), Text(equals=["Назад"]))
 async def bot_back(message: types.Message):
     await message.answer("Выберите действие", reply_markup=main_keyboard)
 
 
 # extend_and_back
-@dp.message_handler(Text(equals=["Продлить подписку"]))
+@dp.message_handler(IsPrivate(), Text(equals=["Продлить подписку"]))
 async def extend_subs(message: types.Message):
     prices = db.select_prices()
     await message.answer(
@@ -87,19 +88,20 @@ async def extend_subs(message: types.Message):
 
 
 # buy_and_back
-@dp.message_handler(Text(equals=["Оплатить"]))
+@dp.message_handler(IsPrivate(), Text(equals=["Оплатить"]))
 async def buy_subs(message: types.Message):
     await message.answer("Выберите вариант подписки", reply_markup=duration_subs)
 
 
 # treal_free
-@dp.message_handler(Text(equals=["Вступить в VIP"]))
+@dp.message_handler(IsPrivate(), Text(equals=["Вступить в VIP"]))
 async def get_free_treal(message: types.Message):
-    await message.answer("Вы можете подписаться на VIP канал, а также вступить в VIP чат", reply_markup=kb_with_link(message.from_user.id))
+    await message.answer("Вы можете подписаться на VIP канал, а также вступить в VIP чат",
+                         reply_markup=kb_with_link(message.from_user.id))
 
 
 # duration_subs
-@dp.message_handler(Text(equals=["1 месяц", "4 месяца", "6 месяцев", "1 год"]))
+@dp.message_handler(IsPrivate(), Text(equals=["1 месяц", "4 месяца", "6 месяцев", "1 год"]))
 async def buy_subs(message: types.Message):
     user = db.select_user(message.from_user.id)
     if user:
@@ -112,7 +114,7 @@ async def buy_subs(message: types.Message):
 
 
 # payed
-@dp.message_handler(Text(equals=["Оплатил"]))
+@dp.message_handler(IsPrivate(), Text(equals=["Оплатил"]))
 async def buy_subs(message: types.Message):
     await message.answer(
         "Для проверки оплаты скопируйте сюда, пожалуйста, хеш своей трансакции и отправьте мне сообщением",
@@ -131,8 +133,10 @@ async def hash_transaction(message: types.Message):
     if not db.select_hash(message.text):
         try:
             response = check_hash(message.text)
-            if response.get("raw_data").get("contract")[0].get("parameter").get("value").get("contract_address") != None:
-                address = response.get("raw_data").get("contract")[0].get("parameter").get("value").get("contract_address")
+            if response.get("raw_data").get("contract")[0].get("parameter").get("value").get(
+                    "contract_address") != None:
+                address = response.get("raw_data").get("contract")[0].get("parameter").get("value").get(
+                    "contract_address")
             else:
                 address = response.get("raw_data").get("contract")[0].get("parameter").get("value").get("to_address")
             response_status = response['ret'][0]['contractRet']
@@ -140,8 +144,11 @@ async def hash_transaction(message: types.Message):
                 kb_subs = await kb_with_link(message.from_user.id)
                 await message.answer("Ваша оплата прошла успешно!", reply_markup=main_keyboard)
                 await message.answer("Вот ваши ссылки для доступа", reply_markup=kb_subs)
-                db.add_hash(message.text) # чтобы потом проверять не повторилась ли трансакция
+                # db.add_hash(message.text)  # чтобы потом проверять не повторилась ли трансакция
                 user = db.select_user(message.from_user.id)
+                # если есть дата окончания подписки, то надо удалить уведомления, чтобы не писать пользователю зря
+                if user[3]:
+                    db.delete_alarm_for_users(message.from_user.id)
                 date = ""
                 if user[2]:
                     date_from_db = user[3].split("-")
@@ -150,19 +157,29 @@ async def hash_transaction(message: types.Message):
                     date = datetime.datetime.now()
                 db.edit_user_subs(message.from_user.id, date.strftime("%Y-%m-%d"))
                 # записать когда напомнить
-                # при появлении в подписчиках чата и группы удалить ссылки вступления
+                user = db.select_user(message.from_user.id)
+                date_end = user[3]
+                date_alarm_week = datetime.datetime.strptime(date_end, "%Y-%m-%d")- relativedelta(days=7)
+                date_alarm_tree_days = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=3)
+                date_alarm_one_day = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=1)
+                db.add_alarm_for_users(message.from_user.id, date_alarm_week)
+                db.add_alarm_for_users(message.from_user.id, date_alarm_tree_days)
+                db.add_alarm_for_users(message.from_user.id, date_alarm_one_day)
+
             elif response_status == "SUCCESS" and address != "411d1eebad3bf7fc31695bf514693e613f2f36e83e":
                 await message.answer(
                     f"Этот платеж предназначен для другого кошелька, "
                     f"отправьте платеж на кошелек TCdBe2LZkaP9GWmksDBwCxiJQ1SjoagTbU",
                     reply_markup=try_payed)
             else:
-                await message.answer("Ваша трансакция не прошла еще, ждем подтверждения операции", reply_markup=try_payed)
+                await message.answer("Ваша трансакция не прошла еще, ждем подтверждения операции",
+                                     reply_markup=try_payed)
         except ValueError:
             await message.answer("Такой трансакции не существует, проверьте еще раз хеш трансакции",
                                  reply_markup=try_payed)
     else:
-        await message.answer("Данная трансакция уже есть в базе, вы уверенны, что это ваша трансакция?")
+        await message.answer(
+            "Данная трансакция уже проверялась и была привязана к другой подписке. Проверьте, пожалуйста, хэш трансакции")
 
 
 def check_hash(hash_trans):
@@ -178,13 +195,13 @@ def check_hash(hash_trans):
 
 
 # buy_with_sale_and_back
-@dp.message_handler(Text(equals=["Оплатить со скидкой"]))
+@dp.message_handler(IsPrivate(), Text(equals=["Оплатить со скидкой"]))
 async def buy_subs(message: types.Message):
     await message.answer("Выберите вариант подписки", reply_markup=duration_subs_sale)
 
 
 # duration_subs_sale
-@dp.message_handler(
+@dp.message_handler(IsPrivate(),
     Text(equals=["1 месяц со скидкой", "4 месяца со скидкой", "6 месяцев со скидкой", "1 год со скидкой"]))
 async def buy_subs(message: types.Message):
     user = db.select_user(message.from_user.id)

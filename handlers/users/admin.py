@@ -5,20 +5,21 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
 from aiogram.types import CallbackQuery
 
+from filters.type_chat import IsPrivate
 from keyboards.inline.inline import kb_with_sales, kb_months
 from loader import dp, db
 from states.admin_state import EnterPrice, EnterSale
 
 
 # Сменить стоимость за {}
-@dp.message_handler(Text(equals=["Сменить стоимость подписки"]), state=None)
+@dp.message_handler(IsPrivate(), Text(equals=["Сменить стоимость подписки"]), state=None)
 async def edit_price(message: types.Message):
     months = await kb_months()
     await message.answer("Выберите тип подписки", reply_markup=months)
     await EnterPrice.duration.set()
 
 
-@dp.callback_query_handler(Text(contains="month#"), state=EnterPrice.duration)
+@dp.callback_query_handler(IsPrivate(), Text(contains="month#"), state=EnterPrice.duration)
 async def edit_price(call: CallbackQuery, state: FSMContext):
     await call.answer()
     await state.update_data(duration=call.data.split("#")[1])
@@ -37,7 +38,7 @@ async def save_price(message: types.Message, state: FSMContext):
 
 
 # Включить пробные две недели для всех пользователей
-@dp.message_handler(Text(equals=["Включить пробные две недели для всех пользователей"]))
+@dp.message_handler(IsPrivate(), Text(equals=["Включить пробные две недели для всех пользователей"]))
 async def edit_price(message: types.Message):
     tomorrow = datetime.datetime.now() + datetime.timedelta(days=1)
     # tomorrow = datetime.datetime.now() для теста
@@ -46,7 +47,7 @@ async def edit_price(message: types.Message):
 
 
 # Добавить акцию
-@dp.message_handler(Text(equals=["Добавить акцию"]), state=None)
+@dp.message_handler(IsPrivate(), Text(equals=["Добавить акцию"]), state=None)
 async def add_sale(message: types.Message):
     await message.answer("Введите размер скидки в процентах (без значка процента)")
     await EnterSale.enter_sale.set()
@@ -84,13 +85,13 @@ async def save_text(message: types.Message, state: FSMContext):
 
 
 # Удалить акцию
-@dp.message_handler(Text(equals=["Удалить акцию"]))
+@dp.message_handler(IsPrivate(), Text(equals=["Удалить акцию"]))
 async def delete_sale(message: types.Message):
     sales = await kb_with_sales()
     await message.answer("Выберите акцию, которую хотите удалить\n\n", reply_markup=sales)
 
 
-@dp.callback_query_handler(Text(contains="del#"))
+@dp.callback_query_handler(IsPrivate(), Text(contains="del#"))
 async def delete_from_db_sale(call: CallbackQuery):
     await call.answer()
     date = (call.data.split("#")[1]).split("-")

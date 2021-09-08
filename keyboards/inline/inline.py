@@ -5,16 +5,13 @@ from loader import dp, db
 
 
 async def generate_channel_link(ID):
-    url_channel = await dp.bot.create_chat_invite_link(chat_id=ID)
-    # print(url_channel.invite_link)
+    url_channel = await dp.bot.create_chat_invite_link(chat_id=ID, member_limit=1)
     return url_channel.invite_link
 
 
 async def kb_with_link(telegram_id):
     channel_link = await generate_channel_link(CHANNEL_ID)
     group_link = await generate_channel_link(GROUP_ID)
-    db.add_used_link(telegram_id, channel_link)
-    db.add_used_link(telegram_id, group_link)
     free_vip_subs = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="Вступить в VIP канал", url=channel_link)
