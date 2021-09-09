@@ -150,7 +150,7 @@ async def hash_transaction(message: types.Message):
                 kb_subs = await kb_with_link(message.from_user.id)
                 await message.answer("Ваша оплата прошла успешно!", reply_markup=main_keyboard)
                 await message.answer("Вот ваши ссылки для доступа", reply_markup=kb_subs)
-                # db.add_hash(message.text)  # чтобы потом проверять не повторилась ли трансакция
+                db.add_hash(message.text)  # чтобы потом проверять не повторилась ли трансакция
                 user = db.select_user(message.from_user.id)
                 # если есть дата окончания подписки, то надо удалить уведомления, чтобы не писать пользователю зря
                 if user[3]:
