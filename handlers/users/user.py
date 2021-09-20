@@ -24,7 +24,7 @@ locale.setlocale(locale.LC_ALL, "")
 async def show_subs_status(message: types.Message):
     user = db.select_user(message.from_user.id)
     if user:
-        date_end = datetime.date(int(user[3].split("-")[0]), int(user[3].split("-")[1]), int(user[3].split("-")[1]))
+        date_end = datetime.date(int(user[3].split("-")[0]), int(user[3].split("-")[1]), int(user[3].split("-")[2]))
         await message.answer(f"Ваша подписка активна до {date_end.strftime('%d %B %Y')}",
                              reply_markup=extend_and_back)
     else:
@@ -145,12 +145,15 @@ async def hash_transaction(message: types.Message):
                 address = response.get("raw_data").get("contract")[0].get("parameter").get("value").get("to_address")
             response_status = response['ret'][0]['contractRet']
             if response_status == "SUCCESS" and address == "411d1eebad3bf7fc31695bf514693e613f2f36e83e":
-                await dp.bot.unban_chat_member(chat_id=GROUP_ID, user_id=message.from_user.id)
-                await dp.bot.unban_chat_member(chat_id=CHANNEL_ID, user_id=message.from_user.id)
+                try:
+                    await dp.bot.unban_chat_member(chat_id=GROUP_ID, user_id=message.from_user.id)
+                    await dp.bot.unban_chat_member(chat_id=CHANNEL_ID, user_id=message.from_user.id)
+                except:
+                    pass
                 kb_subs = await kb_with_link(message.from_user.id)
                 await message.answer("Ваша оплата прошла успешно!", reply_markup=main_keyboard)
                 await message.answer("Вот ваши ссылки для доступа", reply_markup=kb_subs)
-                db.add_hash(message.text)  # чтобы потом проверять не повторилась ли трансакция
+                # db.add_hash(message.text)  # чтобы потом проверять не повторилась ли трансакция
                 user = db.select_user(message.from_user.id)
                 # если есть дата окончания подписки, то надо удалить уведомления, чтобы не писать пользователю зря
                 if user[3]:
