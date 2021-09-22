@@ -19,7 +19,7 @@ async def edit_price(message: types.Message):
     await EnterPrice.duration.set()
 
 
-@dp.callback_query_handler(IsPrivate(), Text(contains="month#"), state=EnterPrice.duration)
+@dp.callback_query_handler(Text(contains="month#"), state=EnterPrice.duration)
 async def edit_price(call: CallbackQuery, state: FSMContext):
     await call.answer()
     await state.update_data(duration=call.data.split("#")[1])
@@ -93,7 +93,7 @@ async def delete_sale(message: types.Message):
     await message.answer("Выберите акцию, которую хотите удалить\n\n", reply_markup=sales)
 
 
-@dp.callback_query_handler(IsPrivate(), Text(contains="del#"))
+@dp.callback_query_handler(Text(contains="del#"))
 async def delete_from_db_sale(call: CallbackQuery):
     await call.answer()
     date = (call.data.split("#")[1]).split("-")

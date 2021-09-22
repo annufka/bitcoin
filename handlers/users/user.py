@@ -46,9 +46,10 @@ async def show_sales(message: types.Message):
     now = datetime.datetime.now()
     # если включен триал и сегодняшняя дата не меньше даты начала триала для всех
     # да, я не хотела писать в переменную, да некрасиво, но да работает)))
-    if treal and now >= datetime.datetime(int(treal[1].split("-")[0]), int(treal[1].split("-")[1]),
+    if treal[0] != 0:
+        if now >= datetime.datetime(int(treal[1].split("-")[0]), int(treal[1].split("-")[1]),
                                           int(treal[1].split("-")[2])):
-        if treal[0] != 0:
+
             date_db = treal[1].split("-")
             date_date = datetime.datetime(int(date_db[0]), int(date_db[1]), int(date_db[2])) + datetime.timedelta(
                 days=14)
