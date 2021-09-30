@@ -48,8 +48,7 @@ async def show_sales(message: types.Message):
     # да, я не хотела писать в переменную, да некрасиво, но да работает)))
     if treal[0] != 0:
         if now >= datetime.datetime(int(treal[1].split("-")[0]), int(treal[1].split("-")[1]),
-                                          int(treal[1].split("-")[2])):
-
+                                    int(treal[1].split("-")[2])):
             date_db = treal[1].split("-")
             date_date = datetime.datetime(int(date_db[0]), int(date_db[1]), int(date_db[2])) + datetime.timedelta(
                 days=14)
@@ -114,7 +113,7 @@ async def buy_subs(message: types.Message):
     else:
         db.add_user(message.from_user.id, message.text)
     price = db.select_price(message.text)
-    await message.answer(f"Переведите {price[0]} USDT на TRC20 кошелек", reply_markup=payed)
+    await message.answer(f"Переведите {price[0]} USDT на TRC20 кошелек. После оплаты нажмите кнопку 'Оплатил' и следуйте дальнейшим инструкциям", reply_markup=payed)
     await message.answer("TCdBe2LZkaP9GWmksDBwCxiJQ1SjoagTbU")
 
 
@@ -154,7 +153,7 @@ async def hash_transaction(message: types.Message):
                 kb_subs = await kb_with_link(message.from_user.id)
                 await message.answer("Ваша оплата прошла успешно!", reply_markup=main_keyboard)
                 await message.answer("Вот ваши ссылки для доступа", reply_markup=kb_subs)
-                # db.add_hash(message.text)  # чтобы потом проверять не повторилась ли трансакция
+                db.add_hash(message.text)  # чтобы потом проверять не повторилась ли трансакция
                 user = db.select_user(message.from_user.id)
                 # если есть дата окончания подписки, то надо удалить уведомления, чтобы не писать пользователю зря
                 if user[3]:
@@ -169,7 +168,7 @@ async def hash_transaction(message: types.Message):
                 # записать когда напомнить
                 user = db.select_user(message.from_user.id)
                 date_end = user[3]
-                date_alarm_week = datetime.datetime.strptime(date_end, "%Y-%m-%d")- relativedelta(days=7)
+                date_alarm_week = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=7)
                 date_alarm_tree_days = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=3)
                 date_alarm_one_day = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=1)
                 db.add_alarm_for_users(message.from_user.id, date_alarm_week)
@@ -212,7 +211,8 @@ async def buy_subs(message: types.Message):
 
 # duration_subs_sale
 @dp.message_handler(IsPrivate(),
-    Text(equals=["1 месяц со скидкой", "4 месяца со скидкой", "6 месяцев со скидкой", "1 год со скидкой"]))
+                    Text(equals=["1 месяц со скидкой", "4 месяца со скидкой", "6 месяцев со скидкой",
+                                 "1 год со скидкой"]))
 async def buy_subs(message: types.Message):
     user = db.select_user(message.from_user.id)
     if user:
@@ -220,5 +220,7 @@ async def buy_subs(message: types.Message):
     else:
         db.add_user(message.from_user.id, message.text)
     price = db.select_price(message.text)
-    await message.answer(f"Переведите {price[0]} USDT на TRC20 кошелек", reply_markup=payed)
+    await message.answer(
+        f"Переведите {price[0]} USDT на TRC20 кошелек. После оплаты нажмите кнопку 'Оплатил' и следуйте дальнейшим инструкциям",
+        reply_markup=payed)
     await message.answer("TCdBe2LZkaP9GWmksDBwCxiJQ1SjoagTbU")

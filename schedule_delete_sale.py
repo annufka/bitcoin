@@ -17,7 +17,7 @@ async def deleteTreal(waitForSeconds):
     while True:
         await asyncio.sleep(waitForSeconds)
         yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
-        treal = db.select_treal_with_date(yesterday.strftime("%Y-%m-%d"))
+        treal = db.treal_mode_with_date(yesterday.strftime("%Y-%m-%d"))
         if treal:
             db.treal_off()
             users = db.select_users_with_treal(yesterday.strftime("%Y-%m-%d"))

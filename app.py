@@ -23,7 +23,7 @@ async def on_startup(dispatcher):
     db.create_schedule()
 
     # Уведомляет про запуск
-    await on_startup_notify(dispatcher)
+    # await on_startup_notify(dispatcher)
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
