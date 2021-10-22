@@ -167,7 +167,6 @@ class Database:
 
     def treal_on(self, begin_date):
         end_date = datetime.datetime.strptime(begin_date, "%Y-%m-%d") + relativedelta(days=14)
-        print(end_date)
         sql = """
               UPDATE Treal SET date_begin=?, treal_on=1, date_end=? WHERE treal_on=0
               """
@@ -269,8 +268,13 @@ class Database:
         sql = "SELECT * FROM Users WHERE date_end=? and subs=1"
         return self.execute(sql, parameters=(yesterday,), fetchall=True)
 
-    # def count_users(self):
-    #     return self.execute("SELECT COUNT(*) FROM Users;", fetchone=True)
+    def select_price_to_user(self, telegram_id):
+        sql = "SELECT subs_id FROM Users WHERE telegram_id=?"
+        subs_id = self.execute(sql, parameters=(telegram_id,), fetchone=True)
+        sql = "SELECT price FROM Subs WHERE subs_id=?"
+        return self.execute(sql, parameters=(int(subs_id[0]),), fetchone=True)
+
+
 
 
 def logger(statement):

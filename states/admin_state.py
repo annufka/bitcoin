@@ -11,3 +11,6 @@ class EnterSale(StatesGroup):
     enter_begin = State()
     enter_end = State()
     enter_text = State()
+
+class IdChannel(StatesGroup):
+    forward_message = State()

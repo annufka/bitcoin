@@ -2,6 +2,7 @@ import locale
 # from datetime import datetime, date, timedelta
 import datetime
 
+import requests
 from aiogram import types
 from aiogram.dispatcher.filters.builtin import Text, Regexp
 from dateutil.relativedelta import relativedelta
@@ -24,9 +25,14 @@ locale.setlocale(locale.LC_ALL, "")
 async def show_subs_status(message: types.Message):
     user = db.select_user(message.from_user.id)
     if user:
-        date_end = datetime.date(int(user[3].split("-")[0]), int(user[3].split("-")[1]), int(user[3].split("-")[2]))
-        await message.answer(f"Ваша подписка активна до {date_end.strftime('%d %B %Y')}",
-                             reply_markup=extend_and_back)
+        try:
+            date_end = datetime.date(int(user[3].split("-")[0]), int(user[3].split("-")[1]), int(user[3].split("-")[2]))
+            await message.answer(f"Ваша подписка активна до {date_end.strftime('%d %B %Y')}",
+                                 reply_markup=extend_and_back)
+        except AttributeError:
+            await message.answer("У вас нет активной подписки", reply_markup=price_and_back)
+        except:
+            await message.answer("Что-то пошло не так, попробуйте позже", reply_markup=price_and_back)
     else:
         await message.answer("У вас нет активной подписки", reply_markup=price_and_back)
 
@@ -113,7 +119,9 @@ async def buy_subs(message: types.Message):
     else:
         db.add_user(message.from_user.id, message.text)
     price = db.select_price(message.text)
-    await message.answer(f"Переведите {price[0]} USDT на TRC20 кошелек. После оплаты нажмите кнопку 'Оплатил' и следуйте дальнейшим инструкциям", reply_markup=payed)
+    await message.answer(
+        f"Переведите {price[0]} USDT на TRC20 кошелек. После оплаты нажмите кнопку 'Оплатил'",
+        reply_markup=payed)
     await message.answer("TCdBe2LZkaP9GWmksDBwCxiJQ1SjoagTbU")
 
 
@@ -121,11 +129,35 @@ async def buy_subs(message: types.Message):
 @dp.message_handler(IsPrivate(), Text(equals=["Оплатил"]))
 async def buy_subs(message: types.Message):
     await message.answer(
-        "Для проверки оплаты скопируйте сюда, пожалуйста, хеш своей трансакции и отправьте мне сообщением",
+        "После оплаты транзакции формируется идентификатор транзакции - hash или id транзакции (TxID). "
+        "Его можно скопировать из информации об оплате или в истории кошелька.\n"
+        "Для проверки оплаты скопируйте сюда, пожалуйста, хеш своей транзакции и отправьте мне сообщением",
         reply_markup=payed)
 
 
 hash_pattern = r"^[a-zA-Z0-9]+$"
+
+
+def check_hash(hash_trans):
+    full_node = HttpProvider('https://api.trongrid.io')
+    solidity_node = HttpProvider('https://api.trongrid.io')
+    event_server = HttpProvider('https://api.trongrid.io')
+    tron = Tron(full_node=full_node,
+                solidity_node=solidity_node,
+                event_server=event_server)
+
+    result = tron.trx.get_transaction(hash_trans)
+    try:
+        trx = tron.fromSun(result.get('raw_data').get('contract')[0].get('parameter').get('value').get('amount'))
+    except:
+        trx = None
+    return result, trx
+
+
+def convert_to_usdt(trx):
+    r = requests.get("https://api.binance.com/api/v3/ticker/price?symbol=TRXUSDT")
+    course = r.json()
+    return float(trx) * float(course["price"])
 
 
 # ловим хеш и проверяем оплату
@@ -137,14 +169,15 @@ async def hash_transaction(message: types.Message):
     if not db.select_hash(message.text):
         try:
             response = check_hash(message.text)
-            if response.get("raw_data").get("contract")[0].get("parameter").get("value").get(
+            if response[0].get("raw_data").get("contract")[0].get("parameter").get("value").get(
                     "contract_address") != None:
-                address = response.get("raw_data").get("contract")[0].get("parameter").get("value").get(
+                address = response[0].get("raw_data").get("contract")[0].get("parameter").get("value").get(
                     "contract_address")
             else:
-                address = response.get("raw_data").get("contract")[0].get("parameter").get("value").get("to_address")
-            response_status = response['ret'][0]['contractRet']
+                address = response[0].get("raw_data").get("contract")[0].get("parameter").get("value").get("to_address")
+            response_status = response[0]['ret'][0]['contractRet']
             if response_status == "SUCCESS" and address == "411d1eebad3bf7fc31695bf514693e613f2f36e83e":
+
                 try:
                     await dp.bot.unban_chat_member(chat_id=GROUP_ID, user_id=message.from_user.id)
                     await dp.bot.unban_chat_member(chat_id=CHANNEL_ID, user_id=message.from_user.id)
@@ -153,7 +186,7 @@ async def hash_transaction(message: types.Message):
                 kb_subs = await kb_with_link(message.from_user.id)
                 await message.answer("Ваша оплата прошла успешно!", reply_markup=main_keyboard)
                 await message.answer("Вот ваши ссылки для доступа", reply_markup=kb_subs)
-                db.add_hash(message.text)  # чтобы потом проверять не повторилась ли трансакция
+                # db.add_hash(message.text)  # чтобы потом проверять не повторилась ли транзакция
                 user = db.select_user(message.from_user.id)
                 # если есть дата окончания подписки, то надо удалить уведомления, чтобы не писать пользователю зря
                 if user[3]:
@@ -175,32 +208,64 @@ async def hash_transaction(message: types.Message):
                 db.add_alarm_for_users(message.from_user.id, date_alarm_tree_days)
                 db.add_alarm_for_users(message.from_user.id, date_alarm_one_day)
 
+                # sales = db.select_sales()
+                # now = datetime.datetime.now()
+                # # если дата текущая больше даты начала акции и меньше даты окончания акции
+                # usdt = convert_to_usdt(response[1])
+                # price = db.select_price_to_user(message.from_user.id)
+                # if sales and now >= datetime.datetime(int(sales[0][1].split("-")[0]), int(sales[0][1].split("-")[1]),
+                #                                         int(sales[0][1].split("-")[2])) and now <= datetime.datetime(
+                #     int(sales[0][2].split("-")[0]),
+                #     int(sales[0][2].split("-")[1]),
+                #     int(sales[0][2].split("-")[2])):
+                #     price = price - (100 - {sales[0][0]} / 100)
+                #
+                # if float(price[0]) - 5 <= usdt:
+                #     try:
+                #         await dp.bot.unban_chat_member(chat_id=GROUP_ID, user_id=message.from_user.id)
+                #         await dp.bot.unban_chat_member(chat_id=CHANNEL_ID, user_id=message.from_user.id)
+                #     except:
+                #         pass
+                #     kb_subs = await kb_with_link(message.from_user.id)
+                #     await message.answer("Ваша оплата прошла успешно!", reply_markup=main_keyboard)
+                #     await message.answer("Вот ваши ссылки для доступа", reply_markup=kb_subs)
+                #     db.add_hash(message.text)  # чтобы потом проверять не повторилась ли транзакция
+                #     user = db.select_user(message.from_user.id)
+                #     # если есть дата окончания подписки, то надо удалить уведомления, чтобы не писать пользователю зря
+                #     if user[3]:
+                #         db.delete_alarm_for_users(message.from_user.id)
+                #     date = ""
+                #     if user[2]:
+                #         date_from_db = user[3].split("-")
+                #         date = datetime.datetime(int(date_from_db[0]), int(date_from_db[1]), int(date_from_db[2]))
+                #     else:
+                #         date = datetime.datetime.now()
+                #     db.edit_user_subs(message.from_user.id, date.strftime("%Y-%m-%d"))
+                #     # записать когда напомнить
+                #     user = db.select_user(message.from_user.id)
+                #     date_end = user[3]
+                #     date_alarm_week = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=7)
+                #     date_alarm_tree_days = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=3)
+                #     date_alarm_one_day = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=1)
+                #     db.add_alarm_for_users(message.from_user.id, date_alarm_week)
+                #     db.add_alarm_for_users(message.from_user.id, date_alarm_tree_days)
+                #     db.add_alarm_for_users(message.from_user.id, date_alarm_one_day)
+                # else:
+                #     await message.answer("Ваш платеж не принят, вы отправили неверную сумму. Свяжитесь с администратором @achibtc, чтобы  разобраться в данной ситуации")
             elif response_status == "SUCCESS" and address != "411d1eebad3bf7fc31695bf514693e613f2f36e83e":
                 await message.answer(
                     f"Этот платеж предназначен для другого кошелька, "
                     f"отправьте платеж на кошелек TCdBe2LZkaP9GWmksDBwCxiJQ1SjoagTbU",
                     reply_markup=try_payed)
             else:
-                await message.answer("Ваша трансакция не прошла еще, ждем подтверждения операции",
+                await message.answer("Ваша транзакция не прошла еще, ждем подтверждения операции",
                                      reply_markup=try_payed)
         except ValueError:
-            await message.answer("Такой трансакции не существует, проверьте еще раз хеш трансакции",
+            await message.answer("Такой транзакции не существует, проверьте еще раз хеш транзакции",
                                  reply_markup=try_payed)
     else:
         await message.answer(
-            "Данная трансакция уже проверялась и была привязана к другой подписке. Проверьте, пожалуйста, хэш трансакции")
-
-
-def check_hash(hash_trans):
-    full_node = HttpProvider('https://api.trongrid.io')
-    solidity_node = HttpProvider('https://api.trongrid.io')
-    event_server = HttpProvider('https://api.trongrid.io')
-    tron = Tron(full_node=full_node,
-                solidity_node=solidity_node,
-                event_server=event_server)
-
-    result = tron.trx.get_transaction(hash_trans)
-    return result
+            "Данная транзакция уже проверялась и была привязана к другой подписке. Проверьте, пожалуйста, хэш транзакции")
 
 
 # buy_with_sale_and_back

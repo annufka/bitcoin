@@ -2,13 +2,13 @@ import datetime
 
 from aiogram import types
 from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters import Text
+from aiogram.dispatcher.filters import Text, Command
 from aiogram.types import CallbackQuery
 
 from filters.type_chat import IsPrivate
 from keyboards.inline.inline import kb_with_sales, kb_months
 from loader import dp, db
-from states.admin_state import EnterPrice, EnterSale
+from states.admin_state import EnterPrice, EnterSale, IdChannel
 
 
 # Сменить стоимость за {}
@@ -100,3 +100,21 @@ async def delete_from_db_sale(call: CallbackQuery):
     date_date = datetime.date(int(date[0]), int(date[1]), int(date[2]))
     db.delete_sale(date_date)
     await call.message.edit_text(text="Вы удалили акцию", reply_markup=None)
+
+# надо чтобы один раз узнать ид канала
+@dp.message_handler(IsPrivate(),Command("id"), state=None)
+async def id_channel(message: types.Message):
+    await message.answer("Перешлите любое сообщение из чата или канала, чтобы я мог вернуть вам id")
+    await IdChannel.forward_message.set()
+
+
+@dp.message_handler(state=IdChannel.forward_message)
+async def forwarded_message(message: types.Message, state: FSMContext):
+    result_id = message.forward_from_chat.id
+    await message.answer(f"{result_id}")
+    await state.finish()
+
+
+@dp.message_handler(Command("id_group"))
+async def chat(member: types.ChatMemberUpdated):
+    await dp.bot.send_message(chat_id=312038680, text=f"{member.chat.id}")
