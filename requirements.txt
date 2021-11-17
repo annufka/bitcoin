@@ -45,3 +45,4 @@ trx-utils==1.0.4
 typing-extensions==3.10.0.0
 urllib3==1.26.6
 yarl==1.6.3
+openpyxl

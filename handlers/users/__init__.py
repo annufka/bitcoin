@@ -1,4 +1,6 @@
-from . import help
-from . import start
-from . import user
-from . import admin
+from .help import dp
+from .start import dp
+from .user import dp
+from .admin import dp
+
+__all__ = ["dp"]

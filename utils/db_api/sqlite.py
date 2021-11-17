@@ -45,6 +45,7 @@ class Database:
         sql = """
         CREATE TABLE IF NOT EXISTS Users (
             telegram_id int NOT NULL,
+            username text NOT NULL,
             subs int NOT NULL,
             date_begin date NULL,
             date_end date NULL,
@@ -115,7 +116,7 @@ class Database:
         ])
         return sql, tuple(parameters.values())
 
-    def add_user(self, telegram_id: int, duration_subs: str):
+    def add_user(self, telegram_id: int, duration_subs: str, username: str):
         if duration_subs == "1 год" or duration_subs == "1 год со скидкой":
             subs_id = 4
         elif duration_subs == "6 месяцев" or duration_subs == "6 месяцев со скидкой":
@@ -125,9 +126,9 @@ class Database:
         else:
             subs_id = 1
         sql = """
-        INSERT INTO Users(telegram_id, subs, subs_id) VALUES(?, ?, ?)
+        INSERT INTO Users(telegram_id, subs, subs_id, username) VALUES(?, ?, ?, ?)
         """
-        self.execute(sql, parameters=(int(telegram_id), 0, int(subs_id)), commit=True)
+        self.execute(sql, parameters=(int(telegram_id), 0, int(subs_id), username), commit=True)
 
     def select_user(self, telegram_id):
         sql = "SELECT * FROM Users WHERE telegram_id=?"
@@ -138,7 +139,7 @@ class Database:
         return self.execute(sql, parameters=(subs_id,), fetchone=True)
 
     def edit_user_subs(self, telegram_id: int, begin_date):
-        user_subs_id = self.select_user(telegram_id)[4]
+        user_subs_id = self.select_user(telegram_id)[5]
         duration = self.select_subs(user_subs_id)[0]
         date_end = datetime.datetime.strptime(begin_date, "%Y-%m-%d") + relativedelta(months=+duration)
         sql = """
@@ -250,12 +251,12 @@ class Database:
               """
         self.execute(sql, commit=True)
 
-    def add_treal_user(self, telegram_id):
+    def add_treal_user(self, telegram_id, username):
         date_end = self.treal_mode()[2]
         sql = """
-                INSERT INTO Users(telegram_id, subs, date_end) VALUES(?, ?, ?)
+                INSERT INTO Users(telegram_id, subs, date_end, username) VALUES(?, ?, ?, ?)
                 """
-        self.execute(sql, parameters=(int(telegram_id), 0, date_end), commit=True)
+        self.execute(sql, parameters=(int(telegram_id), 0, date_end, username), commit=True)
 
     def select_users_with_treal(self, yesterday):
         sql = "SELECT * FROM Users WHERE date_end=? and subs_id=null and date_begin=null and subs=0"
@@ -274,7 +275,9 @@ class Database:
         sql = "SELECT price FROM Subs WHERE subs_id=?"
         return self.execute(sql, parameters=(int(subs_id[0]),), fetchone=True)
 
-
+    def all_users(self):
+        sql = "SELECT *  FROM Users"
+        return self.execute(sql, fetchall=True)
 
 
 def logger(statement):

@@ -131,6 +131,9 @@ admins_main_kb = ReplyKeyboardMarkup(
         [
             KeyboardButton(text="Удалить акцию")
         ],
+        [
+            KeyboardButton(text="Сформировать список подписчиков")
+        ],
 
     ],
     resize_keyboard=True
@@ -147,7 +150,6 @@ buy_with_sale_and_back = ReplyKeyboardMarkup(
     ],
     resize_keyboard=True
 )
-
 
 duration_subs_sale = ReplyKeyboardMarkup(
     keyboard=[
