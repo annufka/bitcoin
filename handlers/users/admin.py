@@ -10,6 +10,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text, Command
 from aiogram.types import CallbackQuery
 
+from data.config import CHANNEL_ID, GROUP_ID
 from filters.type_chat import IsPrivate
 from keyboards.inline.inline import kb_with_sales, kb_months
 from loader import dp, db
@@ -138,22 +139,22 @@ async def delete_from_db_sale(call: CallbackQuery):
 
 
 # надо чтобы один раз узнать ид канала
-@dp.message_handler(IsPrivate(),Command("id"), state=None)
-async def id_channel(message: types.Message):
-    await message.answer("Перешлите любое сообщение из чата или канала, чтобы я мог вернуть вам id")
-    await IdChannel.forward_message.set()
-
-
-@dp.message_handler(state=IdChannel.forward_message)
-async def forwarded_message(message: types.Message, state: FSMContext):
-    result_id = message.forward_from_chat.id
-    await message.answer(f"{result_id}")
-    await state.finish()
-
-
-@dp.message_handler(Command("id_group"))
-async def chat(member: types.ChatMemberUpdated):
-    await dp.bot.send_message(chat_id=312038680, text=f"{member.chat.id}")
+# @dp.message_handler(IsPrivate(),Command("id"), state=None)
+# async def id_channel(message: types.Message):
+#     await message.answer("Перешлите любое сообщение из чата или канала, чтобы я мог вернуть вам id")
+#     await IdChannel.forward_message.set()
+#
+#
+# @dp.message_handler(state=IdChannel.forward_message)
+# async def forwarded_message(message: types.Message, state: FSMContext):
+#     result_id = message.forward_from_chat.id
+#     await message.answer(f"{result_id}")
+#     await state.finish()
+#
+#
+# @dp.message_handler(Command("id_group"))
+# async def chat(member: types.ChatMemberUpdated):
+#     await dp.bot.send_message(chat_id=312038680, text=f"{member.chat.id}")
 
 
 # Сформировать список подписчиков
@@ -202,3 +203,31 @@ async def create_excel(message: types.Message):
         os.remove(f'users-{day.strftime("%Y-%m-%d")}.xlsx')
     else:
         pass
+
+
+@dp.message_handler(Command("members"))
+async def get_members(message: types.Message):
+    from telethon import TelegramClient, sync
+
+    api_id = 18180086
+    api_hash = '32bda2f7e77875c152b12539e3868df7'
+
+    client = TelegramClient(None, api_id, api_hash)
+    client = TelegramClient('+380930159293', api_id, api_hash)
+    client.start()
+
+    if not client.is_user_authorized():
+        client.send_code_request('+380930159293')
+        client.sign_in('+380930159293', input('Enter the code: '))
+
+    # get all the channels that I can access
+    channels = {d.entity.username: d.entity
+                for d in await client.get_dialogs()
+                if d.is_channel}
+
+    # choose the one that I want list users from
+    channel = channels["тест"]
+
+    # get all the users and print them
+    for u in await client.get_participants(channel):
+        print(u.id, u.first_name, u.last_name, u.username)

@@ -241,7 +241,7 @@ async def buy_subs(message: types.Message):
 
 
 # payed
-@dp.message_handler(IsPrivate(), Text(equals=["Оплатил"]))
+@dp.message_handler(IsPrivate(), Text(equals=["Оплатил с внешнего кошелька"]))
 async def buy_subs(message: types.Message):
     await message.answer(
         "После оплаты транзакции формируется идентификатор транзакции - hash или id транзакции (TxID). "
@@ -251,12 +251,22 @@ async def buy_subs(message: types.Message):
 
 
 # payed
+@dp.message_handler(IsPrivate(), Text(equals=["Оплатил с Binance"]))
+async def buy_subs(message: types.Message):
+    await message.answer(
+        "После оплаты транзакции формируется идентификатор транзакции - внутренний номер транзакции. "
+        "Его можно скопировать из информации об оплате или в истории кошелька.\n"
+        "Для проверки оплаты скопируйте сюда, пожалуйста, внутренний номер своей транзакции и отправьте мне сообщением",
+        reply_markup=payed)
+
+
+# payed
 @dp.message_handler(IsPrivate(), Text(equals=["Проверить оплату"]))
 async def buy_subs(message: types.Message):
-    await message.answer("Введите еще раз хеш своей транзакции", reply_markup=payed)
+    await message.answer("Введите еще раз хеш (id) своей транзакции", reply_markup=payed)
 
 
-
+hash_pattern_binance = r"^[0-9]+$"
 hash_pattern = r"^[a-zA-Z0-9]+$"
 
 
@@ -281,227 +291,348 @@ def convert_to_usdt(trx):
     course = r.json()
     return float(trx) * float(course["price"])
 
-
-# ловим хеш и проверяем оплату
-# @dp.message_handler(Regexp(hash_pattern))
-# async def hash_transaction(message: types.Message):
-#     # пример hash b6d8106f9e91de59a74f8219aa527cc787e732b25e4d83787bc37acec461bba5
-#     # кошелек TCdBe2LZkaP9GWmksDBwCxiJQ1SjoagTbU
-#     # hex кошелька 411d1eebad3bf7fc31695bf514693e613f2f36e83e
-#     if not db.select_hash(message.text):
-#         try:
-#             response = check_hash(message.text)
-#             if response[0].get("raw_data").get("contract")[0].get("parameter").get("value").get(
-#                     "contract_address") != None:
-#                 address = response[0].get("raw_data").get("contract")[0].get("parameter").get("value").get(
-#                     "contract_address")
-#             else:
-#                 address = response[0].get("raw_data").get("contract")[0].get("parameter").get("value").get("to_address")
-#             response_status = response[0]['ret'][0]['contractRet']
-#             if response_status == "SUCCESS" and address == "411d1eebad3bf7fc31695bf514693e613f2f36e83e":
-#                 # try:
-#                 #     await dp.bot.unban_chat_member(chat_id=GROUP_ID, user_id=message.from_user.id)
-#                 #     await dp.bot.unban_chat_member(chat_id=CHANNEL_ID, user_id=message.from_user.id)
-#                 # except:
-#                 #     pass
-#                 # kb_subs = await kb_with_link(message.from_user.id)
-#                 # await message.answer("Ваша оплата прошла успешно!", reply_markup=main_keyboard)
-#                 # await message.answer("Вот ваши ссылки для доступа", reply_markup=kb_subs)
-#                 # try:
-#                 #     db.add_hash(message.text)  # чтобы потом проверять не повторилась ли транзакция
-#                 # except sqlite3.Error:
-#                 #     time.sleep(20)
-#                 #     db.add_hash(message.text)
-#
-#                 # try:
-#                 #     user = db.select_user(message.from_user.id)
-#                 # except sqlite3.Error:
-#                 #     time.sleep(20)
-#                 #     user = db.select_user(message.from_user.id)
-#                 #
-#                 # # если есть дата окончания подписки, то надо удалить уведомления, чтобы не писать пользователю зря
-#                 # if user[3]:
-#                 #     try:
-#                 #         db.delete_alarm_for_users(message.from_user.id)
-#                 #     except sqlite3.Error:
-#                 #         time.sleep(20)
-#                 #         try:
-#                 #             db.delete_alarm_for_users(message.from_user.id)
-#                 #         except:
-#                 #             await message.answer(
-#                 #                 "Возникла ошибка, попробуйте немного позже, пожалуйста.\nЕсли эта ошибка возникла несколько раз подряд, "
-#                 #                 "напишите админу @achibtc и скиньте скрин.", reply_markup=duration_subs)
-#                 # date = ""
-#                 # if user[2]:
-#                 #     date_from_db = user[3].split("-")
-#                 #     date = datetime.datetime(int(date_from_db[0]), int(date_from_db[1]), int(date_from_db[2]))
-#                 # else:
-#                 #     date = datetime.datetime.now()
-#                 # try:
-#                 #     db.edit_user_subs(message.from_user.id, date.strftime("%Y-%m-%d"))
-#                 # except sqlite3.Error:
-#                 #     time.sleep(20)
-#                 #     db.edit_user_subs(message.from_user.id, date.strftime("%Y-%m-%d"))
-#                 #
-#                 # # записать когда напомнить
-#                 # # try:
-#                 # #     user = db.select_user(message.from_user.id)
-#                 # # except sqlite3.Error:
-#                 # #     time.sleep(20)
-#                 # #     user = db.select_user(message.from_user.id)
-#                 #
-#                 # date_end = user[3]
-#                 # date_alarm_week = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=7)
-#                 # date_alarm_tree_days = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=3)
-#                 # date_alarm_one_day = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=1)
-#                 #
-#                 # try:
-#                 #     db.add_alarm_for_users(message.from_user.id, date_alarm_week)
-#                 # except sqlite3.Error:
-#                 #     time.sleep(20)
-#                 #     db.add_alarm_for_users(message.from_user.id, date_alarm_week)
-#                 #
-#                 # try:
-#                 #     db.add_alarm_for_users(message.from_user.id, date_alarm_tree_days)
-#                 # except sqlite3.Error:
-#                 #     time.sleep(20)
-#                 #     db.add_alarm_for_users(message.from_user.id, date_alarm_tree_days)
-#                 #
-#                 # try:
-#                 #     db.add_alarm_for_users(message.from_user.id, date_alarm_one_day)
-#                 # except sqlite3.Error:
-#                 #     time.sleep(20)
-#                 #     db.add_alarm_for_users(message.from_user.id, date_alarm_one_day)
-#
-#
-#                 try:
-#                     sales = db.select_sales()
-#                 except sqlite3.Error:
-#                     time.sleep(20)
-#                     sales = db.select_sales()
-#                 now = datetime.datetime.now()
-#                 # если дата текущая больше даты начала акции и меньше даты окончания акции
-#                 usdt = convert_to_usdt(response[1])
-#                 try:
-#                     price = db.select_price_to_user(message.from_user.id)
-#                 except sqlite3.Error:
-#                     time.sleep(20)
-#                     price = db.select_price_to_user(message.from_user.id)
-#                 price_int = price[0]
-#                 if sales and now >= datetime.datetime(int(sales[0][1].split("-")[0]), int(sales[0][1].split("-")[1]),
-#                                                       int(sales[0][1].split("-")[2])) and now <= datetime.datetime(
-#                     int(sales[0][2].split("-")[0]),
-#                     int(sales[0][2].split("-")[1]),
-#                     int(sales[0][2].split("-")[2])):
-#                     price_int = price - (100 - {sales[0][0]} / 100)
-#
-#                 if float(price_int) - 5 <= usdt:
-#                     try:
-#                         await dp.bot.unban_chat_member(chat_id=GROUP_ID, user_id=message.from_user.id)
-#                         await dp.bot.unban_chat_member(chat_id=CHANNEL_ID, user_id=message.from_user.id)
-#                     except:
-#                         pass
-#                     kb_subs = await kb_with_link(message.from_user.id)
-#                     await message.answer("Ваша оплата прошла успешно!", reply_markup=main_keyboard)
-#                     await message.answer("Вот ваши ссылки для доступа", reply_markup=kb_subs)
-#                     try:
-#                         db.add_hash(message.text)  # чтобы потом проверять не повторилась ли транзакция
-#                     except sqlite3.Error:
-#                         time.sleep(20)
-#                         db.add_hash(message.text)
-#
-#                     try:
-#                         user = db.select_user(message.from_user.id)
-#                     except sqlite3.Error:
-#                         time.sleep(20)
-#                         user = db.select_user(message.from_user.id)
-#
-#                     # если есть дата окончания подписки, то надо удалить уведомления, чтобы не писать пользователю зря
-#                     if user[3]:
-#                         try:
-#                             db.delete_alarm_for_users(message.from_user.id)
-#                         except sqlite3.Error:
-#                             time.sleep(20)
-#                             try:
-#                                 db.delete_alarm_for_users(message.from_user.id)
-#                             except:
-#                                 await message.answer(
-#                                     "Возникла ошибка, попробуйте немного позже, пожалуйста.\nЕсли эта ошибка возникла несколько раз подряд, "
-#                                     "напишите админу @achibtc и скиньте скрин.", reply_markup=duration_subs)
-#                     date = ""
-#                     if user[2]:
-#                         date_from_db = user[3].split("-")
-#                         date = datetime.datetime(int(date_from_db[0]), int(date_from_db[1]), int(date_from_db[2]))
-#                     else:
-#                         date = datetime.datetime.now()
-#                     db.edit_user_subs(message.from_user.id, date.strftime("%Y-%m-%d"))
-#                     await dp.bot.send_message(chat_id=312038680, text=f"Добавлен/отредактирован пользователь {message.from_user.id} @{message.from_user.username} {message.from_user.full_name} {message.text}")
-#                     # записать когда напомнить
-#                     # user = db.select_user(message.from_user.id)
-#                     date_end = user[3]
-#                     date_alarm_week = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=7)
-#                     date_alarm_tree_days = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=3)
-#                     date_alarm_one_day = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=1)
-#                     try:
-#                         db.add_alarm_for_users(message.from_user.id, date_alarm_week)
-#                     except sqlite3.Error:
-#                         time.sleep(20)
-#                         db.add_alarm_for_users(message.from_user.id, date_alarm_week)
-#
-#                     try:
-#                         db.add_alarm_for_users(message.from_user.id, date_alarm_tree_days)
-#                     except sqlite3.Error:
-#                         time.sleep(20)
-#                         db.add_alarm_for_users(message.from_user.id, date_alarm_tree_days)
-#
-#                     try:
-#                         db.add_alarm_for_users(message.from_user.id, date_alarm_one_day)
-#                     except sqlite3.Error:
-#                         time.sleep(20)
-#                         db.add_alarm_for_users(message.from_user.id, date_alarm_one_day)
-#                 else:
-#                     await message.answer(
-#                         "Ваш платеж не принят, вы отправили неверную сумму. Свяжитесь с администратором @achibtc, чтобы  разобраться в данной ситуации")
-#                     await dp.bot.send_message(chat_id=312038680,
-#                                         text=f"Мало оплатил пользователь {message.from_user.id} @{message.from_user.username} {message.from_user.full_name} {message.text}")
-#
-#
-#             elif response_status == "SUCCESS" and address != "411d1eebad3bf7fc31695bf514693e613f2f36e83e":
-#                 await message.answer(
-#                     f"Этот платеж предназначен для другого кошелька, "
-#                     f"отправьте платеж на кошелек TCdBe2LZkaP9GWmksDBwCxiJQ1SjoagTbU",
-#                     reply_markup=try_payed)
-#                 await dp.bot.send_message(chat_id=312038680,
-#                                           text=f"Не тот кошелек {message.from_user.id} @{message.from_user.username} {message.from_user.full_name} {message.text}")
-#
-#             else:
-#                 await message.answer("Ваша транзакция не прошла еще, ждем подтверждения операции",
-#                                      reply_markup=try_payed)
-#                 await dp.bot.send_message(chat_id=312038680,
-#                                           text=f"Еще не прошла {message.from_user.id} @{message.from_user.username} {message.from_user.full_name} {message.text}")
-#
-#         except ValueError:
-#             await message.answer("Такой транзакции не существует, проверьте еще раз хеш транзакции",
-#                                  reply_markup=try_payed)
-#             await dp.bot.send_message(chat_id=312038680,
-#                                       text=f"Левый хеш {message.from_user.id} @{message.from_user.username} {message.from_user.full_name} {message.text}")
-#     else:
-#         await message.answer(
-#             "Данная транзакция уже проверялась и была привязана к другой подписке. Проверьте, пожалуйста, хэш транзакции")
-#         await dp.bot.send_message(chat_id=312038680,
-#                                   text=f"Второй раз хеш {message.from_user.id} @{message.from_user.username} {message.from_user.full_name} {message.text} {message.from_user.username}")
-
-# проверка есть ли оплата
-@dp.message_handler(Regexp(hash_pattern))
+# ловим хеш с бинанса
+@dp.message_handler(Regexp(hash_pattern_binance))
 async def check_payment(message: types.Message):
+    await message.answer("Подождите пару минут, сейчас проверю введенные данные")
     client = Client(API_KEY, API_SECRET)
     info = client.get_withdraw_history()
     for result, dic_ in enumerate(info):
-        if dic_.get('address', '') == 'TPtoeSG1f8SytjRxrBdzTb1vfDJGDfxadR':
-            print(dic_)
-            break
+        if message.text in dic_.get('txId', ''):
+            if not db.select_hash(message.text):
+                if dic_.get('status', '') == 1 or dic_.get('status', '') == 6:
+                    try:
+                        sales = db.select_sales()
+                    except sqlite3.Error:
+                        time.sleep(20)
+                        sales = db.select_sales()
+                    now = datetime.datetime.now()
+                    # если дата текущая больше даты начала акции и меньше даты окончания акции
+
+                    try:
+                        price = db.select_price_to_user(message.from_user.id)
+                    except sqlite3.Error:
+                        time.sleep(20)
+                        price = db.select_price_to_user(message.from_user.id)
+                    price_int = price[0]
+                    if sales and now >= datetime.datetime(int(sales[0][1].split("-")[0]),
+                                                          int(sales[0][1].split("-")[1]),
+                                                          int(sales[0][1].split("-")[2])) and now <= datetime.datetime(
+                        int(sales[0][2].split("-")[0]),
+                        int(sales[0][2].split("-")[1]),
+                        int(sales[0][2].split("-")[2])):
+                        price_int = price - (100 - {sales[0][0]} / 100)
+
+                    if float(price_int) - 5 <= dic_.get('amount', ''):
+                        try:
+                            await dp.bot.unban_chat_member(chat_id=GROUP_ID, user_id=message.from_user.id)
+                            await dp.bot.unban_chat_member(chat_id=CHANNEL_ID, user_id=message.from_user.id)
+                        except:
+                            pass
+                        kb_subs = await kb_with_link(message.from_user.id)
+                        await message.answer("Ваша оплата прошла успешно!", reply_markup=main_keyboard)
+                        await message.answer("Вот ваши ссылки для доступа", reply_markup=kb_subs)
+                        try:
+                            db.add_hash(message.text)  # чтобы потом проверять не повторилась ли транзакция
+                        except sqlite3.Error:
+                            time.sleep(20)
+                            db.add_hash(message.text)
+
+                        try:
+                            user = db.select_user(message.from_user.id)
+                        except sqlite3.Error:
+                            time.sleep(20)
+                            user = db.select_user(message.from_user.id)
+
+                        # если есть дата окончания подписки, то надо удалить уведомления, чтобы не писать пользователю зря
+                        if user[3]:
+                            try:
+                                db.delete_alarm_for_users(message.from_user.id)
+                            except sqlite3.Error:
+                                time.sleep(20)
+                                try:
+                                    db.delete_alarm_for_users(message.from_user.id)
+                                except:
+                                    await message.answer(
+                                        "Возникла ошибка, попробуйте немного позже, пожалуйста.\nЕсли эта ошибка возникла несколько раз подряд, "
+                                        "напишите админу @achibtc и скиньте скрин.", reply_markup=duration_subs)
+                        date = ""
+                        if user[2]:
+                            date_from_db = user[3].split("-")
+                            date = datetime.datetime(int(date_from_db[0]), int(date_from_db[1]), int(date_from_db[2]))
+                        else:
+                            date = datetime.datetime.now()
+                        db.edit_user_subs(message.from_user.id, date.strftime("%Y-%m-%d"))
+                        await dp.bot.send_message(chat_id=312038680,
+                                                  text=f"Добавлен/отредактирован пользователь {message.from_user.id} @{message.from_user.username} {message.from_user.full_name} {message.text}")
+                        # записать когда напомнить
+                        # user = db.select_user(message.from_user.id)
+                        date_end = user[3]
+                        date_alarm_week = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=7)
+                        date_alarm_tree_days = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=3)
+                        date_alarm_one_day = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=1)
+                        try:
+                            db.add_alarm_for_users(message.from_user.id, date_alarm_week)
+                        except sqlite3.Error:
+                            time.sleep(20)
+                            db.add_alarm_for_users(message.from_user.id, date_alarm_week)
+
+                        try:
+                            db.add_alarm_for_users(message.from_user.id, date_alarm_tree_days)
+                        except sqlite3.Error:
+                            time.sleep(20)
+                            db.add_alarm_for_users(message.from_user.id, date_alarm_tree_days)
+
+                        try:
+                            db.add_alarm_for_users(message.from_user.id, date_alarm_one_day)
+                        except sqlite3.Error:
+                            time.sleep(20)
+                            db.add_alarm_for_users(message.from_user.id, date_alarm_one_day)
+                    else:
+                        await message.answer(
+                            "Ваш платеж не принят, вы отправили неверную сумму. Свяжитесь с администратором @achibtc, чтобы  разобраться в данной ситуации")
+                        await dp.bot.send_message(chat_id=312038680,
+                                                  text=f"Мало оплатил пользователь {message.from_user.id} @{message.from_user.username} {message.from_user.full_name} {message.text}")
+
+                elif dic_.get('status', '') == 0:
+                    await message.answer("Ваша транзакция не прошла еще, ждем подтверждения операции",
+                                         reply_markup=try_payed)
+                    await dp.bot.send_message(chat_id=312038680,
+                                              text=f"Еще не прошла {message.from_user.id} @{message.from_user.username} {message.from_user.full_name} {message.text}")
+
+
+            elif db.select_hash(message.text):
+                await message.answer(
+                        "Данная транзакция уже проверялась и была привязана к другой подписке. Проверьте, пожалуйста, хэш транзакции")
+                await dp.bot.send_message(chat_id=312038680,
+                                          text=f"Второй раз хеш {message.from_user.id} @{message.from_user.username} {message.from_user.full_name} {message.text} {message.from_user.username}")
+
+
+        elif message.text not in dic_.get('txId', ''):
+            await message.answer(
+                    f"Возможно этот платеж предназначен для другого кошелька, "
+                    f"проверьте адрес кошелька TCdBe2LZkaP9GWmksDBwCxiJQ1SjoagTbU",
+                    reply_markup=try_payed)
+            await dp.bot.send_message(chat_id=312038680,
+                                text=f"Возможно не тот кошелек {message.from_user.id} @{message.from_user.username} {message.from_user.full_name} {message.text}")
+
+
+        else:
+            await message.answer("Такой транзакции не существует, проверьте еще раз хеш транзакции",
+                                    reply_markup=try_payed)
+            await dp.bot.send_message(chat_id=312038680,
+                                    text=f"Левый хеш {message.from_user.id} @{message.from_user.username} {message.from_user.full_name} {message.text}")
+        break
+
+# ловим хеш и проверяем оплату
+@dp.message_handler(Regexp(hash_pattern))
+async def hash_transaction(message: types.Message):
+    # пример hash b6d8106f9e91de59a74f8219aa527cc787e732b25e4d83787bc37acec461bba5
+    # кошелек TCdBe2LZkaP9GWmksDBwCxiJQ1SjoagTbU
+    # hex кошелька 411d1eebad3bf7fc31695bf514693e613f2f36e83e
+    await message.answer("Подождите пару минут, сейчас проверю введенные данные")
+    if not db.select_hash(message.text):
+        try:
+            response = check_hash(message.text)
+            if response[0].get("raw_data").get("contract")[0].get("parameter").get("value").get(
+                    "contract_address") != None:
+                address = response[0].get("raw_data").get("contract")[0].get("parameter").get("value").get(
+                    "contract_address")
+            else:
+                address = response[0].get("raw_data").get("contract")[0].get("parameter").get("value").get("to_address")
+            response_status = response[0]['ret'][0]['contractRet']
+            if response_status == "SUCCESS" and address == "411d1eebad3bf7fc31695bf514693e613f2f36e83e":
+                # try:
+                #     await dp.bot.unban_chat_member(chat_id=GROUP_ID, user_id=message.from_user.id)
+                #     await dp.bot.unban_chat_member(chat_id=CHANNEL_ID, user_id=message.from_user.id)
+                # except:
+                #     pass
+                # kb_subs = await kb_with_link(message.from_user.id)
+                # await message.answer("Ваша оплата прошла успешно!", reply_markup=main_keyboard)
+                # await message.answer("Вот ваши ссылки для доступа", reply_markup=kb_subs)
+                # try:
+                #     db.add_hash(message.text)  # чтобы потом проверять не повторилась ли транзакция
+                # except sqlite3.Error:
+                #     time.sleep(20)
+                #     db.add_hash(message.text)
+
+                # try:
+                #     user = db.select_user(message.from_user.id)
+                # except sqlite3.Error:
+                #     time.sleep(20)
+                #     user = db.select_user(message.from_user.id)
+                #
+                # # если есть дата окончания подписки, то надо удалить уведомления, чтобы не писать пользователю зря
+                # if user[3]:
+                #     try:
+                #         db.delete_alarm_for_users(message.from_user.id)
+                #     except sqlite3.Error:
+                #         time.sleep(20)
+                #         try:
+                #             db.delete_alarm_for_users(message.from_user.id)
+                #         except:
+                #             await message.answer(
+                #                 "Возникла ошибка, попробуйте немного позже, пожалуйста.\nЕсли эта ошибка возникла несколько раз подряд, "
+                #                 "напишите админу @achibtc и скиньте скрин.", reply_markup=duration_subs)
+                # date = ""
+                # if user[2]:
+                #     date_from_db = user[3].split("-")
+                #     date = datetime.datetime(int(date_from_db[0]), int(date_from_db[1]), int(date_from_db[2]))
+                # else:
+                #     date = datetime.datetime.now()
+                # try:
+                #     db.edit_user_subs(message.from_user.id, date.strftime("%Y-%m-%d"))
+                # except sqlite3.Error:
+                #     time.sleep(20)
+                #     db.edit_user_subs(message.from_user.id, date.strftime("%Y-%m-%d"))
+                #
+                # # записать когда напомнить
+                # # try:
+                # #     user = db.select_user(message.from_user.id)
+                # # except sqlite3.Error:
+                # #     time.sleep(20)
+                # #     user = db.select_user(message.from_user.id)
+                #
+                # date_end = user[3]
+                # date_alarm_week = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=7)
+                # date_alarm_tree_days = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=3)
+                # date_alarm_one_day = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=1)
+                #
+                # try:
+                #     db.add_alarm_for_users(message.from_user.id, date_alarm_week)
+                # except sqlite3.Error:
+                #     time.sleep(20)
+                #     db.add_alarm_for_users(message.from_user.id, date_alarm_week)
+                #
+                # try:
+                #     db.add_alarm_for_users(message.from_user.id, date_alarm_tree_days)
+                # except sqlite3.Error:
+                #     time.sleep(20)
+                #     db.add_alarm_for_users(message.from_user.id, date_alarm_tree_days)
+                #
+                # try:
+                #     db.add_alarm_for_users(message.from_user.id, date_alarm_one_day)
+                # except sqlite3.Error:
+                #     time.sleep(20)
+                #     db.add_alarm_for_users(message.from_user.id, date_alarm_one_day)
+
+
+                try:
+                    sales = db.select_sales()
+                except sqlite3.Error:
+                    time.sleep(20)
+                    sales = db.select_sales()
+                now = datetime.datetime.now()
+                # если дата текущая больше даты начала акции и меньше даты окончания акции
+                usdt = convert_to_usdt(response[1])
+                try:
+                    price = db.select_price_to_user(message.from_user.id)
+                except sqlite3.Error:
+                    time.sleep(20)
+                    price = db.select_price_to_user(message.from_user.id)
+                price_int = price[0]
+                if sales and now >= datetime.datetime(int(sales[0][1].split("-")[0]), int(sales[0][1].split("-")[1]),
+                                                      int(sales[0][1].split("-")[2])) and now <= datetime.datetime(
+                    int(sales[0][2].split("-")[0]),
+                    int(sales[0][2].split("-")[1]),
+                    int(sales[0][2].split("-")[2])):
+                    price_int = price - (100 - {sales[0][0]} / 100)
+
+                if float(price_int) - 5 <= usdt:
+                    try:
+                        await dp.bot.unban_chat_member(chat_id=GROUP_ID, user_id=message.from_user.id)
+                        await dp.bot.unban_chat_member(chat_id=CHANNEL_ID, user_id=message.from_user.id)
+                    except:
+                        pass
+                    kb_subs = await kb_with_link(message.from_user.id)
+                    await message.answer("Ваша оплата прошла успешно!", reply_markup=main_keyboard)
+                    await message.answer("Вот ваши ссылки для доступа", reply_markup=kb_subs)
+                    try:
+                        db.add_hash(message.text)  # чтобы потом проверять не повторилась ли транзакция
+                    except sqlite3.Error:
+                        time.sleep(20)
+                        db.add_hash(message.text)
+
+                    try:
+                        user = db.select_user(message.from_user.id)
+                    except sqlite3.Error:
+                        time.sleep(20)
+                        user = db.select_user(message.from_user.id)
+
+                    # если есть дата окончания подписки, то надо удалить уведомления, чтобы не писать пользователю зря
+                    if user[3]:
+                        try:
+                            db.delete_alarm_for_users(message.from_user.id)
+                        except sqlite3.Error:
+                            time.sleep(20)
+                            try:
+                                db.delete_alarm_for_users(message.from_user.id)
+                            except:
+                                await message.answer(
+                                    "Возникла ошибка, попробуйте немного позже, пожалуйста.\nЕсли эта ошибка возникла несколько раз подряд, "
+                                    "напишите админу @achibtc и скиньте скрин.", reply_markup=duration_subs)
+                    date = ""
+                    if user[2]:
+                        date_from_db = user[3].split("-")
+                        date = datetime.datetime(int(date_from_db[0]), int(date_from_db[1]), int(date_from_db[2]))
+                    else:
+                        date = datetime.datetime.now()
+                    db.edit_user_subs(message.from_user.id, date.strftime("%Y-%m-%d"))
+                    await dp.bot.send_message(chat_id=312038680, text=f"Добавлен/отредактирован пользователь {message.from_user.id} @{message.from_user.username} {message.from_user.full_name} {message.text}")
+                    # записать когда напомнить
+                    # user = db.select_user(message.from_user.id)
+                    date_end = user[3]
+                    date_alarm_week = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=7)
+                    date_alarm_tree_days = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=3)
+                    date_alarm_one_day = datetime.datetime.strptime(date_end, "%Y-%m-%d") - relativedelta(days=1)
+                    try:
+                        db.add_alarm_for_users(message.from_user.id, date_alarm_week)
+                    except sqlite3.Error:
+                        time.sleep(20)
+                        db.add_alarm_for_users(message.from_user.id, date_alarm_week)
+
+                    try:
+                        db.add_alarm_for_users(message.from_user.id, date_alarm_tree_days)
+                    except sqlite3.Error:
+                        time.sleep(20)
+                        db.add_alarm_for_users(message.from_user.id, date_alarm_tree_days)
+
+                    try:
+                        db.add_alarm_for_users(message.from_user.id, date_alarm_one_day)
+                    except sqlite3.Error:
+                        time.sleep(20)
+                        db.add_alarm_for_users(message.from_user.id, date_alarm_one_day)
+                else:
+                    await message.answer(
+                        "Ваш платеж не принят, вы отправили неверную сумму. Свяжитесь с администратором @achibtc, чтобы  разобраться в данной ситуации")
+                    await dp.bot.send_message(chat_id=312038680,
+                                        text=f"Мало оплатил пользователь {message.from_user.id} @{message.from_user.username} {message.from_user.full_name} {message.text}")
+
+
+            elif response_status == "SUCCESS" and address != "411d1eebad3bf7fc31695bf514693e613f2f36e83e":
+                await message.answer(
+                    f"Этот платеж предназначен для другого кошелька, "
+                    f"отправьте платеж на кошелек TCdBe2LZkaP9GWmksDBwCxiJQ1SjoagTbU",
+                    reply_markup=try_payed)
+                await dp.bot.send_message(chat_id=312038680,
+                                          text=f"Не тот кошелек {message.from_user.id} @{message.from_user.username} {message.from_user.full_name} {message.text}")
+
+            else:
+                await message.answer("Ваша транзакция не прошла еще, ждем подтверждения операции",
+                                     reply_markup=try_payed)
+                await dp.bot.send_message(chat_id=312038680,
+                                          text=f"Еще не прошла {message.from_user.id} @{message.from_user.username} {message.from_user.full_name} {message.text}")
+
+        except ValueError:
+            await message.answer("Такой транзакции не существует, проверьте еще раз хеш транзакции",
+                                 reply_markup=try_payed)
+            await dp.bot.send_message(chat_id=312038680,
+                                      text=f"Левый хеш {message.from_user.id} @{message.from_user.username} {message.from_user.full_name} {message.text}")
     else:
-        print("None")
+        await message.answer(
+            "Данная транзакция уже проверялась и была привязана к другой подписке. Проверьте, пожалуйста, хэш транзакции")
+        await dp.bot.send_message(chat_id=312038680,
+                                  text=f"Второй раз хеш {message.from_user.id} @{message.from_user.username} {message.from_user.full_name} {message.text} {message.from_user.username}")
 
 
 # buy_with_sale_and_back

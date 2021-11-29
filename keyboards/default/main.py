@@ -96,7 +96,10 @@ duration_subs = ReplyKeyboardMarkup(
 payed = ReplyKeyboardMarkup(
     keyboard=[
         [
-            KeyboardButton(text="Оплатил")
+            KeyboardButton(text="Оплатил с Binance")
+        ],
+        [
+            KeyboardButton(text="Оплатил с внешнего кошелька")
         ],
         [
             KeyboardButton(text="Назад")
