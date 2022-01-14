@@ -39,14 +39,40 @@ async def show_subs_status(message: types.Message):
     if user:
         try:
             date_end = datetime.date(int(user[3].split("-")[0]), int(user[3].split("-")[1]), int(user[3].split("-")[2]))
-            await message.answer(f"Ваша подписка активна до {date_end.strftime('%d %B %Y')}",
+            if not date_end:
+                sub_id = db.select_user_subs_id(message.from_user.id)
+                if int(sub_id[0]) == 5:
+                    await message.answer("У вас пожизненная подписка", reply_markup=extend_and_back)
+                else:
+                    await message.answer("У вас нет активной подписки", reply_markup=price_and_back)
+            else:
+                await message.answer(f"Ваша подписка активна до {date_end.strftime('%d %B %Y')}",
                                  reply_markup=extend_and_back)
         except AttributeError:
             await message.answer("У вас нет активной подписки", reply_markup=price_and_back)
         except:
             await message.answer("Что-то пошло не так, попробуйте позже", reply_markup=price_and_back)
     else:
-        await message.answer("У вас нет активной подписки", reply_markup=price_and_back)
+        user = db.select_user_by_username(message.from_user.username)
+        if user:
+            try:
+                date_end = datetime.date(int(user[3].split("-")[0]), int(user[3].split("-")[1]),
+                                         int(user[3].split("-")[2]))
+                if not date_end:
+                    sub_id = db.select_user_subs_id(message.from_user.id)
+                    if int(sub_id[0]) == 5:
+                        await message.answer("У вас пожизненная подписка", reply_markup=extend_and_back)
+                    else:
+                        await message.answer("У вас нет активной подписки", reply_markup=price_and_back)
+                else:
+                    await message.answer(f"Ваша подписка активна до {date_end.strftime('%d %B %Y')}",
+                                     reply_markup=extend_and_back)
+            except AttributeError:
+                await message.answer("У вас нет активной подписки", reply_markup=price_and_back)
+            except:
+                await message.answer("Что-то пошло не так, попробуйте позже", reply_markup=price_and_back)
+        else:
+            await message.answer("У вас нет активной подписки", reply_markup=price_and_back)
 
 
 @dp.message_handler(IsPrivate(), Text(equals=["Тарифы"]))

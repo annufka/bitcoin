@@ -34,8 +34,8 @@ class Database:
         sql = """
         CREATE TABLE IF NOT EXISTS Subs (
             subs_id int NOT NULL,
-            month_subs int NOT NULL,
-            price int NOT NULL,
+            month_subs int,
+            price int,
             PRIMARY KEY (subs_id)
             );
         """
@@ -44,7 +44,7 @@ class Database:
     def create_table_users(self):
         sql = """
         CREATE TABLE IF NOT EXISTS Users (
-            telegram_id int NOT NULL,
+            telegram_id int,
             username text NOT NULL,
             subs int NOT NULL,
             date_begin date NULL,
@@ -132,6 +132,21 @@ class Database:
 
     def select_user(self, telegram_id):
         sql = "SELECT * FROM Users WHERE telegram_id=?"
+        return self.execute(sql, parameters=(telegram_id,), fetchone=True)
+
+    def select_user_by_username(self, username):
+        sql = "SELECT * FROM Users WHERE username=?"
+        return self.execute(sql, parameters=(username,), fetchone=True)
+
+    # вот эта хрень нужна на первое время, потому что нет у меня ид пользователей, есть только юзернеймы. Потом уберу
+    def edit_user_telegram_id(self, username: str, telegram_id: int):
+        sql = """
+                UPDATE Users SET telegram_id=? WHERE username=?
+                """
+        self.execute(sql, parameters=(int(telegram_id), username), commit=True)
+
+    def select_user_subs_id(self, telegram_id):
+        sql = "SELECT subs_id FROM Users WHERE telegram_id=?"
         return self.execute(sql, parameters=(telegram_id,), fetchone=True)
 
     def select_subs(self, subs_id):
